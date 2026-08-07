@@ -883,6 +883,13 @@ async function initDB(pool) {
       END
     `);
 
+    // 🚀 TABLE SYNC DEPS: Add takeaway/service override columns to prevent syncTableStatus compilation failures
+    await runQuery("RestaurantOrderCur - ServiceChargeOverride", "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RestaurantOrderCur' AND COLUMN_NAME = 'ServiceChargeOverride') ALTER TABLE RestaurantOrderCur ADD ServiceChargeOverride BIT NULL");
+    await runQuery("RestaurantOrderCur - TakeawayCharge", "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RestaurantOrderCur' AND COLUMN_NAME = 'TakeawayCharge') ALTER TABLE RestaurantOrderCur ADD TakeawayCharge DECIMAL(18,2) DEFAULT 0");
+    await runQuery("RestaurantOrder - TakeawayCharge", "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RestaurantOrder' AND COLUMN_NAME = 'TakeawayCharge') ALTER TABLE RestaurantOrder ADD TakeawayCharge DECIMAL(18,2) DEFAULT 0");
+    await runQuery("RestaurantOrderCur - TakeawayChargeOverride", "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RestaurantOrderCur' AND COLUMN_NAME = 'TakeawayChargeOverride') ALTER TABLE RestaurantOrderCur ADD TakeawayChargeOverride BIT NULL");
+    await runQuery("RestaurantOrder - TakeawayChargeOverride", "IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RestaurantOrder' AND COLUMN_NAME = 'TakeawayChargeOverride') ALTER TABLE RestaurantOrder ADD TakeawayChargeOverride BIT NULL");
+
   } catch (err) {
     console.error("❌ DB Initialization Failed:", err.message);
   }
