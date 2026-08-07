@@ -11,6 +11,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Modal,
   StatusBar,
   StyleSheet,
   Text,
