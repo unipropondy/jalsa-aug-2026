@@ -101,6 +101,7 @@ export default function GeneralSettingsScreen() {
   const [showLoyalty, setShowLoyalty] = useState(settings.showLoyalty !== undefined ? settings.showLoyalty : true);
   const [showRewardPoints, setShowRewardPoints] = useState(settings.showRewardPoints !== undefined ? settings.showRewardPoints : true);
   const [showPromoCode, setShowPromoCode] = useState(settings.showPromoCode !== undefined ? settings.showPromoCode : true);
+  const [showBillTime, setShowBillTime] = useState(settings.showBillTime !== undefined ? settings.showBillTime : true);
   const [vipRuleEnabled, setVipRuleEnabled] = useState(settings.vipRuleEnabled !== undefined ? settings.vipRuleEnabled : false);
 
 
@@ -128,6 +129,7 @@ export default function GeneralSettingsScreen() {
     setShowLoyalty(settings.showLoyalty !== undefined ? settings.showLoyalty : true);
     setShowRewardPoints(settings.showRewardPoints !== undefined ? settings.showRewardPoints : true);
     setShowPromoCode(settings.showPromoCode !== undefined ? settings.showPromoCode : true);
+    setShowBillTime(settings.showBillTime !== undefined ? settings.showBillTime : true);
     setVipRuleEnabled(settings.vipRuleEnabled !== undefined ? settings.vipRuleEnabled : false);
 
 
@@ -227,6 +229,7 @@ export default function GeneralSettingsScreen() {
       showLoyalty,
       showRewardPoints,
       showPromoCode,
+      showBillTime,
       vipRuleEnabled,
     });
     setSaving(false);
@@ -312,6 +315,13 @@ export default function GeneralSettingsScreen() {
           icon: "print-outline",
           value: enableKDSPrint,
           onToggle: setEnableKDSPrint,
+        },
+        {
+          title: "Show Bill Time",
+          desc: "Display order time on all printed bills, KOTs, and receipts.",
+          icon: "time-outline",
+          value: showBillTime,
+          onToggle: setShowBillTime,
         },
       ]
     },
