@@ -1036,7 +1036,11 @@ export default function MenuScreen() {
           if (splitData.IsGroupDish === true) {
             const res = await fetch(`${API_URL}/api/menu/splitdishes`);
             const data = await res.json();
-            setSplitMembers(data);
+            // Ensure each member has IsSelected: false for checkbox rendering
+            const members = Array.isArray(data)
+              ? data.map((m: any) => ({ ...m, IsSelected: false }))
+              : [];
+            setSplitMembers(members);
             setSelectedSplitDish(dish);
             setShowSplitModal(true);
             return;
@@ -1693,39 +1697,57 @@ export default function MenuScreen() {
                   showsVerticalScrollIndicator={true}
                   contentContainerStyle={{ gap: 8, paddingRight: 4 }}
                 >
-                  {splitMembers.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        const updated = [...splitMembers];
-                        updated[index].IsSelected = !updated[index].IsSelected;
-                        setSplitMembers(updated);
+                  {splitMembers.length === 0 ? (
+                    <Text
+                      style={{
+                        color: Theme.textMuted,
+                        textAlign: "center",
+                        marginTop: 20,
+                        fontFamily: Fonts.medium,
+                        fontSize: 13,
                       }}
-                      style={[
-                        styles.modifierRow,
-                        { marginHorizontal: 1, marginBottom: 0 },
-                        item.IsSelected && styles.modifierRowSelected,
-                      ]}
                     >
-                      <Text style={[styles.modifierName, { fontSize: 14 }]}>
-                        {item.Name}
-                      </Text>
-
-                      <View
+                      No artists found.{"\n"}Please add artists in menu settings
+                      (IsSplitDish = 1).
+                    </Text>
+                  ) : (
+                    splitMembers.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          const updated = [...splitMembers];
+                          updated[index] = {
+                            ...updated[index],
+                            IsSelected: !updated[index].IsSelected,
+                          };
+                          setSplitMembers(updated);
+                        }}
                         style={[
-                          styles.checkbox,
-                          { width: 22, height: 22, borderRadius: 6 },
-                          item.IsSelected && styles.checkboxActive,
-                          { borderColor: Theme.success },
+                          styles.modifierRow,
+                          { marginHorizontal: 1, marginBottom: 0 },
+                          item.IsSelected && styles.modifierRowSelected,
                         ]}
                       >
-                        {item.IsSelected && (
-                          <Ionicons name="checkmark" size={14} color="#fff" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                        <Text style={[styles.modifierName, { fontSize: 14 }]}>
+                          {item.Name}
+                        </Text>
+
+                        <View
+                          style={[
+                            styles.checkbox,
+                            { width: 22, height: 22, borderRadius: 6 },
+                            item.IsSelected && styles.checkboxActive,
+                            { borderColor: Theme.success },
+                          ]}
+                        >
+                          {item.IsSelected && (
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </ScrollView>
               </View>
 
