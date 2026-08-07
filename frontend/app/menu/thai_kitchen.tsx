@@ -1583,58 +1583,56 @@ export default function MenuScreen() {
           </View>
         )}
 
-        {showSplitModal && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
+        <Modal
+          visible={showSplitModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSplitModal(false)}
+        >
+          <View style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}>
+            <View style={{
+              width: "100%",
+              maxWidth: 480,
+              backgroundColor: Theme.bgCard,
+              borderRadius: 20,
+              overflow: "hidden",
+            }}>
+              {/* Header */}
+              <View style={[styles.modalHeader, { paddingHorizontal: 20, paddingTop: 20 }]}>
                 <Text style={styles.modalTitle}>{selectedSplitDish?.Name}</Text>
                 <TouchableOpacity
                   onPress={() => setShowSplitModal(false)}
                   style={styles.modalClose}
                 >
-                  <Ionicons
-                    name="close"
-                    size={20}
-                    color={Theme.textSecondary}
-                  />
+                  <Ionicons name="close" size={20} color={Theme.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.modalBody}>
-                <View
-                  style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}
-                >
+              {/* Body */}
+              <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+                {/* Amount + Song Name row */}
+                <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        color: Theme.textSecondary,
-                        fontSize: 13,
-                        fontFamily: Fonts.bold,
-                        marginBottom: 6,
-                      }}
-                    >
+                    <Text style={{ color: Theme.textSecondary, fontSize: 13, fontFamily: Fonts.bold, marginBottom: 6 }}>
                       Amount
                     </Text>
                     <TextInput
                       placeholder="Enter Amount"
                       value={splitAmount}
-                      onChangeText={(text) =>
-                        setSplitAmount(text.replace(/[^0-9]/g, ""))
-                      }
+                      onChangeText={(text) => setSplitAmount(text.replace(/[^0-9]/g, ""))}
                       keyboardType="numeric"
                       placeholderTextColor={Theme.textMuted}
                       style={styles.customInput}
                     />
                   </View>
                   <View style={{ flex: 1.5 }}>
-                    <Text
-                      style={{
-                        color: Theme.textSecondary,
-                        fontSize: 13,
-                        fontFamily: Fonts.bold,
-                        marginBottom: 6,
-                      }}
-                    >
+                    <Text style={{ color: Theme.textSecondary, fontSize: 13, fontFamily: Fonts.bold, marginBottom: 6 }}>
                       Song Name
                     </Text>
                     <TextInput
@@ -1647,68 +1645,35 @@ export default function MenuScreen() {
                   </View>
                 </View>
 
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 12,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontFamily: Fonts.bold,
-                      color: Theme.textPrimary,
-                    }}
-                  >
+                {/* Select Members header */}
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <Text style={{ fontSize: 14, fontFamily: Fonts.bold, color: Theme.textPrimary }}>
                     Select Members
                   </Text>
                   <TouchableOpacity
                     onPress={() => {
-                      const allSelected = splitMembers.every(
-                        (x) => x.IsSelected,
-                      );
-                      const updated = splitMembers.map((x) => ({
-                        ...x,
-                        IsSelected: !allSelected,
-                      }));
-                      setSplitMembers(updated);
+                      const allSelected = splitMembers.every((x) => x.IsSelected);
+                      setSplitMembers(splitMembers.map((x) => ({ ...x, IsSelected: !allSelected })));
                     }}
                     style={{ paddingVertical: 2, paddingHorizontal: 6 }}
                   >
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontFamily: Fonts.bold,
-                        color: Theme.primary,
-                      }}
-                    >
-                      {splitMembers.every((x) => x.IsSelected)
-                        ? "Deselect All"
-                        : "Select All"}
+                    <Text style={{ fontSize: 13, fontFamily: Fonts.bold, color: Theme.primary }}>
+                      {splitMembers.every((x) => x.IsSelected) ? "Deselect All" : "Select All"}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Scrollable List */}
+                {/* Scrollable artist list */}
                 <ScrollView
-                  style={{ flex: 1, maxHeight: 300 }}
+                  style={{ height: 240 }}
+                  nestedScrollEnabled={true}
+                  keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
-                  contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+                  contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
                 >
                   {splitMembers.length === 0 ? (
-                    <Text
-                      style={{
-                        color: Theme.textMuted,
-                        textAlign: "center",
-                        marginTop: 20,
-                        fontFamily: Fonts.medium,
-                        fontSize: 13,
-                      }}
-                    >
-                      No artists found.{"\n"}Please add artists in menu settings
-                      (IsSplitDish = 1).
+                    <Text style={{ color: Theme.textMuted, textAlign: "center", marginTop: 20, fontFamily: Fonts.medium, fontSize: 13 }}>
+                      No artists found.{"\n"}Please mark artists as IsSplitDish in the DB.
                     </Text>
                   ) : (
                     splitMembers.map((item, index) => (
@@ -1717,33 +1682,32 @@ export default function MenuScreen() {
                         activeOpacity={0.7}
                         onPress={() => {
                           const updated = [...splitMembers];
-                          updated[index] = {
-                            ...updated[index],
-                            IsSelected: !updated[index].IsSelected,
-                          };
+                          updated[index] = { ...updated[index], IsSelected: !updated[index].IsSelected };
                           setSplitMembers(updated);
                         }}
-                        style={[
-                          styles.modifierRow,
-                          { marginHorizontal: 1, marginBottom: 0 },
-                          item.IsSelected && styles.modifierRowSelected,
-                        ]}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          paddingHorizontal: 14,
+                          paddingVertical: 12,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: item.IsSelected ? Theme.success : Theme.border,
+                          backgroundColor: item.IsSelected ? "rgba(34,197,94,0.08)" : Theme.bgMuted,
+                          minHeight: 48,
+                        }}
                       >
-                        <Text style={[styles.modifierName, { fontSize: 14 }]}>
+                        <Text style={{ fontSize: 14, fontFamily: Fonts.bold, color: Theme.textPrimary, flex: 1 }}>
                           {item.Name}
                         </Text>
-
-                        <View
-                          style={[
-                            styles.checkbox,
-                            { width: 22, height: 22, borderRadius: 6 },
-                            item.IsSelected && styles.checkboxActive,
-                            { borderColor: Theme.success },
-                          ]}
-                        >
-                          {item.IsSelected && (
-                            <Ionicons name="checkmark" size={14} color="#fff" />
-                          )}
+                        <View style={{
+                          width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+                          borderColor: Theme.success,
+                          backgroundColor: item.IsSelected ? Theme.success : "transparent",
+                          justifyContent: "center", alignItems: "center",
+                        }}>
+                          {item.IsSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
                         </View>
                       </TouchableOpacity>
                     ))
@@ -1751,17 +1715,16 @@ export default function MenuScreen() {
                 </ScrollView>
               </View>
 
-              <View style={styles.modalFooter}>
+              {/* Footer */}
+              <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}>
                 <TouchableOpacity
-                  style={[
-                    styles.modalBtnAdd,
-                    {
-                      backgroundColor: Theme.success,
-                      flex: 1,
-                      height: 46,
-                      borderRadius: 12,
-                    },
-                  ]}
+                  style={{
+                    backgroundColor: Theme.success,
+                    height: 52,
+                    borderRadius: 14,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
                   onPress={() => {
                     const selected = splitMembers.filter((x) => x.IsSelected);
 
@@ -1819,14 +1782,14 @@ export default function MenuScreen() {
                     setShowSplitModal(false);
                   }}
                 >
-                  <Text style={[styles.modalBtnTextAdd, { fontSize: 14 }]}>
+                  <Text style={{ color: "#fff", fontFamily: Fonts.black, fontSize: 15, letterSpacing: 1 }}>
                     DONE
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-        )}
+        </Modal>
 
         {/* MODIFIER MODAL (Screenshot 1 Style) */}
         {showModifier && selectedDish && (
