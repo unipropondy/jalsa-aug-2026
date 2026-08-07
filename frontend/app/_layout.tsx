@@ -60,18 +60,6 @@ function SocketToastListener() {
       type: string;
       tableId?: string;
     }) => {
-      const user = useAuthStore.getState().user;
-      if (!user) return;
-
-      const { useNotificationStore } = require("../stores/notificationStore");
-      useNotificationStore.getState().addNotification({
-        title: `Table ${payload.tableNo} Request`,
-        message: payload.type,
-        type: "GENERAL",
-        tableNo: payload.tableNo,
-        section: "SECTION_1",
-      });
-
       toast.showToast({
         message: `🛎️ Table ${payload.tableNo} Request`,
         subtitle: payload.type,
