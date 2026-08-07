@@ -672,8 +672,8 @@ const [artistSearch, setArtistSearch] = useState("");
 
 const loadDishes = async () => {
   try {
-    const res = await axios.get(
-      `${API_URL}/api/settlement/artist-list`,
+    const res = await API.get(
+      `/settlement/artist-list`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1001,8 +1001,8 @@ const fetchDayHistory = async () => {
         });
       }
 
-      await axios.post(
-        `${API_URL}/api/settlement/artist-cashbox`,
+      await API.post(
+        `/settlement/artist-cashbox`,
         {
           ArtistName: cashBoxForm.ArtistName,
           Amount: parseFloat(cashBoxForm.Amount)
