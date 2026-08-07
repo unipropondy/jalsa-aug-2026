@@ -4020,7 +4020,7 @@ export default function Category() {
           <Text style={styles.licenseCompanyName} numberOfLines={1}>
             {licenseInfo?.CompanyName || "Smart POS"}
           </Text>
-          <Text style={styles.licenseAddress} numberOfLines={2}>
+          <Text style={styles.licenseAddress} numberOfLines={1}>
             {licenseInfo?.Address || "Shop Address"}
           </Text>
           {licenseInfo && (() => {
@@ -4488,33 +4488,33 @@ const styles = StyleSheet.create({
   },
   licenseCardContainer: {
     position: "absolute",
-    backgroundColor: "#11102E",                 // App's deep dark card base
+    backgroundColor: "#11102E",
     borderWidth: 1.5,
-    borderColor: "#A855F7",                     // Bright neon violet border
+    borderColor: "#A855F7",
     borderRadius: 14,
     padding: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    maxWidth: 360,                              // Increased slightly to prevent tight wrapping
-    minWidth: 320,                              // Increased slightly to prevent tight wrapping
+    gap: 10,
+    maxWidth: 240,                              // Compact on mobile so AI button is never covered
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 6,
-    zIndex: 9999,
+    zIndex: 100,                                // Below AI button (zIndex 9999)
   },
   licenseLogoContainer: {
-    width: 52,                                  // Increased to match reference image proportions
-    height: 52,                                 // Increased to match reference image proportions
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: "#18163A",
     borderWidth: 1,
     borderColor: "#3D3875",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
+    flexShrink: 0,
   },
   licenseLogo: {
     width: "100%",
@@ -4525,15 +4525,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   licenseCompanyName: {
-    fontSize: 13.5,                             // Well-balanced font size
+    fontSize: 12,
     fontFamily: Fonts.black,
     color: "#FFFFFF",
   },
   licenseAddress: {
-    fontSize: 9.5,                              // Well-balanced font size
+    fontSize: 8.5,
     fontFamily: Fonts.medium,
     color: "#9B8EC4",
-    lineHeight: 13,
+    lineHeight: 12,
   },
   licenseRow: {
     flexDirection: "row",
@@ -4541,7 +4541,7 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   licenseDateText: {
-    fontSize: 9.5,                              // Well-balanced font size
+    fontSize: 8.5,
     fontFamily: Fonts.bold,
     color: "#F0EEFF",
   },
@@ -4550,9 +4550,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   licenseCopyright: {
-    fontSize: 8.5,                              // Well-balanced font size
+    fontSize: 8,
     fontFamily: Fonts.medium,
     color: "#5A5080",
-    marginTop: 1.5,
+    marginTop: 1,
   },
 });
