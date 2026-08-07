@@ -1,10 +1,10 @@
-import { API_URL } from "@/constants/Config";
+﻿import { API_URL } from "@/constants/Config";
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "../../components/Toast";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
+import API from '../../api';
 import { useRouter, useNavigation } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -37,11 +37,11 @@ interface ArtistRow {
 }
 
 const WALLET_STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  Paid:             { bg: "rgba(16,185,129,0.15)",  text: "#10B981", label: "🟢 Settled" },
-  "Partially Paid": { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", label: "🟠 Partial" },
-  Pending:          { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", label: "🔴 Due" },
-  Accruing:         { bg: "rgba(59,130,246,0.15)",  text: "#3B82F6", label: "🔵 Live Day" },
-  "No Bonus":      { bg: "rgba(255,255,255,0.06)",  text: "#5A5080", label: "⚪ Empty" },
+  Paid:             { bg: "rgba(16,185,129,0.15)",  text: "#10B981", label: "ðŸŸ¢ Settled" },
+  "Partially Paid": { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", label: "ðŸŸ  Partial" },
+  Pending:          { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", label: "ðŸ”´ Due" },
+  Accruing:         { bg: "rgba(59,130,246,0.15)",  text: "#3B82F6", label: "ðŸ”µ Live Day" },
+  "No Bonus":      { bg: "rgba(255,255,255,0.06)",  text: "#5A5080", label: "âšª Empty" },
 };
 
 export default function ArtistManagementScreen() {
@@ -66,8 +66,8 @@ export default function ArtistManagementScreen() {
     try {
       setLoading(true);
       const [summaryRes, pendingRes] = await Promise.all([
-        axios.get(`${API_URL}/api/artist-bonus/sales-summary`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/api/artist-bonus/pending`,       { headers: { Authorization: `Bearer ${token}` } }),
+        API.get(`/artist-bonus/sales-summary`, { headers: { Authorization: `Bearer ${token}` } }),
+        API.get(`/artist-bonus/pending`,       { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (summaryRes.data.success) {
@@ -82,7 +82,7 @@ export default function ArtistManagementScreen() {
       }
 
       // Fetch last payment for dashboard summary
-      const payRes = await axios.get(`${API_URL}/api/artist-bonus/payments?limit=1`, {
+      const payRes = await API.get(`/artist-bonus/payments?limit=1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (payRes.data.success && payRes.data.data && payRes.data.data.length > 0) {
@@ -119,24 +119,24 @@ export default function ArtistManagementScreen() {
   const totalAllTimePending = Object.values(pendingByArtist).reduce((s, v) => s + v, 0);
 
   // Business Day State Logic
-  let dayStateLabel = "⚪ Fully Settled";
+  let dayStateLabel = "âšª Fully Settled";
   let dayStateColor = "#78716C";
   let dayStateIcon = "ellipse-outline";
   let dayStateDesc = "All artist wallets are settled.";
 
   if (isDayActive) {
-    dayStateLabel = "🟢 Business Day Active";
+    dayStateLabel = "ðŸŸ¢ Business Day Active";
     dayStateColor = "#16A34A";
     dayStateIcon = "play-circle-outline";
     dayStateDesc = "Sales are accumulating automatically. Live Sales Updating...";
   } else if (!isDayActive) {
     if (artists.some(a => a.totalSales > 0 && a.bonusEarned === 0 && activeRule)) {
-      dayStateLabel = "🟡 Awaiting Calculation";
+      dayStateLabel = "ðŸŸ¡ Awaiting Calculation";
       dayStateColor = "#CA8A04";
       dayStateIcon = "time-outline";
       dayStateDesc = "Business day closed. Settle live calculations.";
     } else if (totalAllTimePending > 0) {
-      dayStateLabel = "🔵 Bonus Calculated";
+      dayStateLabel = "ðŸ”µ Bonus Calculated";
       dayStateColor = "#2563EB";
       dayStateIcon = "checkbox-outline";
       dayStateDesc = "Wallets updated. Ready for settlement.";
@@ -169,7 +169,7 @@ export default function ArtistManagementScreen() {
           <Text style={styles.headerTitle}>Artist Hub</Text>
           <Text style={styles.headerSub}>
             {activeRule
-              ? `Rule: Every $${activeRule.ThresholdAmount} ➔ $${activeRule.BonusAmount} Bonus`
+              ? `Rule: Every $${activeRule.ThresholdAmount} âž” $${activeRule.BonusAmount} Bonus`
               : "No active bonus rule"}
           </Text>
         </View>
@@ -183,7 +183,7 @@ export default function ArtistManagementScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Theme.primary]} tintColor={Theme.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── 1. BUSINESS DAY STATUS BANNER ── */}
+        {/* â”€â”€ 1. BUSINESS DAY STATUS BANNER â”€â”€ */}
         <View style={[styles.dayBanner, { borderColor: dayStateColor + "40" }]}>
           <View style={[styles.dayBannerIconWrap, { backgroundColor: dayStateColor + "15" }]}>
             <Ionicons name={dayStateIcon as any} size={22} color={dayStateColor} />
@@ -194,7 +194,7 @@ export default function ArtistManagementScreen() {
                 {dayStateLabel}
               </Text>
               {activeDay && (
-                <Text style={styles.dayDateText}>· {activeDay}</Text>
+                <Text style={styles.dayDateText}>Â· {activeDay}</Text>
               )}
             </View>
             <Text style={styles.dayBannerSub}>{dayStateDesc}</Text>
@@ -206,7 +206,7 @@ export default function ArtistManagementScreen() {
           )}
         </View>
 
-        {/* ── 2. ATTENTION BANNER ── */}
+        {/* â”€â”€ 2. ATTENTION BANNER â”€â”€ */}
         {artistsWithPending.length > 0 && (
           <TouchableOpacity
             style={styles.pendingAlert}
@@ -217,9 +217,9 @@ export default function ArtistManagementScreen() {
               <Ionicons name="alert-circle" size={22} color="#DC2626" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.pendingAlertTitle}>💰 Bonus Due</Text>
+              <Text style={styles.pendingAlertTitle}>ðŸ’° Bonus Due</Text>
               <Text style={styles.pendingAlertSub}>
-                {artistsWithPending.length} Artist{artistsWithPending.length > 1 ? "s" : ""} · ${totalAllTimePending.toFixed(2)} due payout
+                {artistsWithPending.length} Artist{artistsWithPending.length > 1 ? "s" : ""} Â· ${totalAllTimePending.toFixed(2)} due payout
               </Text>
             </View>
             <View style={styles.settleBtn}>
@@ -247,7 +247,7 @@ export default function ArtistManagementScreen() {
           ))}
         </View>
 
-        {/* ── 4. QUICK ACTIONS ── */}
+        {/* â”€â”€ 4. QUICK ACTIONS â”€â”€ */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickLinksRow}>
           {quickLinks.map(link => (
@@ -266,13 +266,13 @@ export default function ArtistManagementScreen() {
           ))}
         </View>
 
-        {/* ── 5. ARTIST LIST ── */}
+        {/* â”€â”€ 5. ARTIST LIST â”€â”€ */}
         {artists.length > 0 && (
           <>
             <View style={styles.listHeaderRow}>
               <Text style={styles.sectionTitle}>Artist Bonus Registry</Text>
               <TouchableOpacity onPress={() => router.push("/menu/artist-sales" as any)}>
-                <Text style={styles.listHeaderLink}>View Live Sales ➔</Text>
+                <Text style={styles.listHeaderLink}>View Live Sales âž”</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.artistListCard}>

@@ -1,10 +1,10 @@
-import { API_URL } from "@/constants/Config";
+﻿import { API_URL } from "@/constants/Config";
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "../../components/Toast";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
+import API from '../../api';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -263,7 +263,7 @@ export default function ArtistSalesScreen() {
       const from = explicitFrom !== undefined ? explicitFrom : fromDate;
       const to   = explicitTo   !== undefined ? explicitTo   : toDate;
       const params = from && to ? `?fromDate=${from}&toDate=${to}` : "";
-      const res = await axios.get(
+      const res = await API.get(
         `${API_URL}/api/artist-bonus/sales-summary${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -349,8 +349,8 @@ export default function ArtistSalesScreen() {
           <View style={[styles.activeDot, { backgroundColor: isDayActive ? "#3B82F6" : "#78716C" }]} />
           <Text style={[styles.activeDayText, { color: isDayActive ? "#93C5FD" : "#78716C" }]}>
             {isDayActive
-              ? (isActiveDayView ? `Live Day: ${activeDay}` : `Viewing: ${fromDate} – ${toDate}`)
-              : "No Active Day — Historical Mode"}
+              ? (isActiveDayView ? `Live Day: ${activeDay}` : `Viewing: ${fromDate} â€“ ${toDate}`)
+              : "No Active Day â€” Historical Mode"}
           </Text>
           {isDayActive && <Text style={styles.liveUpdatingText}>Live updating...</Text>}
         </View>
@@ -390,7 +390,7 @@ export default function ArtistSalesScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {loading && <ActivityIndicator size="large" color={Theme.primary} style={{ marginTop: 20 }} />}
 
-        {/* ── LIVE EVENTS FEED ── */}
+        {/* â”€â”€ LIVE EVENTS FEED â”€â”€ */}
         {isDayActive && events.length > 0 && (
           <View style={styles.eventsCard}>
             <View style={styles.eventsHeader}>
@@ -401,7 +401,7 @@ export default function ArtistSalesScreen() {
               <View key={i} style={styles.eventRow}>
                 {ev.milestoneReached ? (
                   <View style={styles.eventMilestoneRow}>
-                    <Text style={styles.eventCelebration}>🎉</Text>
+                    <Text style={styles.eventCelebration}>ðŸŽ‰</Text>
                     <Text style={styles.eventText}>
                       <Text style={{ fontFamily: Fonts.black }}>{ev.artistName}</Text> earned <Text style={styles.earnedText}>+${activeRule?.BonusAmount || 50} Bonus</Text>!
                     </Text>
@@ -412,7 +412,7 @@ export default function ArtistSalesScreen() {
                     <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                       <Text style={styles.eventTime}>{ev.time}</Text>
                       <Text style={styles.eventText}>
-                        <Text style={{ fontFamily: Fonts.bold }}>{ev.artistName}</Text> · Today's Sales: <Text style={{ fontFamily: Fonts.bold }}>${ev.amount.toFixed(0)}</Text>
+                        <Text style={{ fontFamily: Fonts.bold }}>{ev.artistName}</Text> Â· Today's Sales: <Text style={{ fontFamily: Fonts.bold }}>${ev.amount.toFixed(0)}</Text>
                       </Text>
                     </View>
                     <Text style={styles.eventRemainingText}>Need ${ev.remaining} for next bonus</Text>
@@ -423,7 +423,7 @@ export default function ArtistSalesScreen() {
           </View>
         )}
 
-        {/* ── ARTIST SALES LIST ── */}
+        {/* â”€â”€ ARTIST SALES LIST â”€â”€ */}
         <View style={[styles.cardsContainer, { flexDirection: width >= 768 ? "row" : "column", flexWrap: width >= 768 ? "wrap" : "nowrap", justifyContent: "space-between" }]}>
           {filtered.map((a) => {
             const hasEarned = a.bonusEarned > 0;
