@@ -6,7 +6,7 @@
   "backends": [
     {
       "name": "RN POS",
-      "url": "https://mersalclub-production.up.railway.app",
+      "url": "https://jalsa-aug-2026-production.up.railway.app",
       "enabled": true
     },
     {

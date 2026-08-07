@@ -18,7 +18,7 @@ const getLocalBackendIP = (): string => {
 
 const localIP = getLocalBackendIP();
 
-const PRODUCTION_BACKEND = "https://mersalclub-production.up.railway.app";
+const PRODUCTION_BACKEND = "https://jalsa-aug-2026-production.up.railway.app";
 
 export const API_URL =
   (Platform.OS === "web" && typeof window !== "undefined")
