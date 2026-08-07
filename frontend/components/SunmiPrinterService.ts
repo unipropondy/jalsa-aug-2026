@@ -696,9 +696,11 @@ class SunmiPrinterService {
       const orderNo = data.orderNo || data.orderId || "N/A";
       const waiter = data.waiterName || "Staff";
       const now = new Date();
+      const { showBillTime } = useGeneralSettingsStore.getState().settings;
+      const displayTime = showBillTime !== false;
       const dateStr = formatToSingaporeDate(now, { day: '2-digit', month: '2-digit' });
-      const timeStr = formatToSingaporeTime(now, { hour: '2-digit', minute: '2-digit', hour12: false });
-      const timestamp = `${dateStr} ${timeStr}`;
+      const timeStr = displayTime ? ` ${formatToSingaporeTime(now, { hour: '2-digit', minute: '2-digit', hour12: false })}` : "";
+      const timestamp = `${dateStr}${timeStr}`;
 
       const setSize = async (size: number) => {
         try {
