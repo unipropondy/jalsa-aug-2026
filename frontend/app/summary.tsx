@@ -2608,7 +2608,7 @@ export default function SummaryScreen() {
                               ? `Reward Member: ${rewardMember.Name}`
                               : rewardMember.Name}
                           </Text>
-                          {Boolean(rewardMember.IsVIP) && (
+                          {Boolean(rewardMember.IsVIP) && !!useGeneralSettingsStore.getState().settings.vipRuleEnabled && (
                             <View
                               style={{
                                 flexDirection: "row",
@@ -2638,104 +2638,104 @@ export default function SummaryScreen() {
                             </View>
                           )}
                         </View>
+                
+                                        <View
+                                          style={{
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: 8,
+                                            marginLeft: 22,
+                                            marginVertical: 4,
+                                          }}
+                                        >
+                                          <TouchableOpacity
+                                            onPress={() => setShowRewardModal(true)}
+                                            style={{
+                                              paddingHorizontal: 8,
+                                              paddingVertical: 4,
+                                              borderRadius: 6,
+                                              backgroundColor: Theme.bgCard,
+                                              borderWidth: 1,
+                                              borderColor: Theme.border,
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                fontSize: 11,
+                                                fontFamily: Fonts.bold,
+                                                color: Theme.primary,
+                                              }}
+                                            >
+                                              Change
+                                            </Text>
+                                          </TouchableOpacity>
+                                          <TouchableOpacity
+                                            onPress={() => {
+                                              // If the current discount was applied as a reward discount, clear it too
+                                              if (
+                                                discountInfo?.applied &&
+                                                discountInfo?.label?.startsWith("Reward:")
+                                              ) {
+                                                const cleared = {
+                                                  applied: false,
+                                                  type: "fixed" as const,
+                                                  value: 0,
+                                                  label: "",
+                                                };
+                                                applyDiscount(cleared);
+                                                const ctx = getOrderContext();
+                                                if (ctx) updateOrderDiscount(ctx, cleared);
+                                              }
+                                              setRewardMember(null);
+                                              setVipOffer(null);
+                                            }}
+                                            style={{
+                                              paddingHorizontal: 8,
+                                              paddingVertical: 4,
+                                              borderRadius: 6,
+                                              backgroundColor: Theme.dangerBg,
+                                              borderWidth: 1,
+                                              borderColor: Theme.dangerBorder,
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                fontSize: 11,
+                                                fontFamily: Fonts.bold,
+                                                color: Theme.danger,
+                                              }}
+                                            >
+                                              Remove
+                                            </Text>
+                                          </TouchableOpacity>
+                                        </View>
+                
+                                        <Text
+                                          style={{
+                                            fontSize: 12,
+                                            fontFamily: Fonts.bold,
+                                            color: Theme.textSecondary,
+                                            marginLeft: 22,
+                                          }}
+                                        >
+                                          Phone: {rewardMember.Phone}
+                                        </Text>
 
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                            marginLeft: 22,
-                            marginVertical: 4,
-                          }}
-                        >
-                          <TouchableOpacity
-                            onPress={() => setShowRewardModal(true)}
-                            style={{
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
-                              backgroundColor: Theme.bgCard,
-                              borderWidth: 1,
-                              borderColor: Theme.border,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                fontFamily: Fonts.bold,
-                                color: Theme.primary,
-                              }}
-                            >
-                              Change
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => {
-                              // If the current discount was applied as a reward discount, clear it too
-                              if (
-                                discountInfo?.applied &&
-                                discountInfo?.label?.startsWith("Reward:")
-                              ) {
-                                const cleared = {
-                                  applied: false,
-                                  type: "fixed" as const,
-                                  value: 0,
-                                  label: "",
-                                };
-                                applyDiscount(cleared);
-                                const ctx = getOrderContext();
-                                if (ctx) updateOrderDiscount(ctx, cleared);
-                              }
-                              setRewardMember(null);
-                              setVipOffer(null);
-                            }}
-                            style={{
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
-                              backgroundColor: Theme.dangerBg,
-                              borderWidth: 1,
-                              borderColor: Theme.dangerBorder,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                fontFamily: Fonts.bold,
-                                color: Theme.danger,
-                              }}
-                            >
-                              Remove
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
+                                        {showRewardPoints && (
+                                          <Text
+                                            style={{
+                                              fontSize: 12,
+                                              fontFamily: Fonts.bold,
+                                              color: Theme.primary,
+                                              marginLeft: 22,
+                                            }}
+                                          >
+                                            Reward Balance: {currencySymbol}
+                                            {rewardCreditVal.toFixed(2)}
+                                          </Text>
+                                        )}
 
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontFamily: Fonts.bold,
-                            color: Theme.textSecondary,
-                            marginLeft: 22,
-                          }}
-                        >
-                          Phone: {rewardMember.Phone}
-                        </Text>
-
-                        {showRewardPoints && (
-                          <Text
-                            style={{
-                              fontSize: 12,
-                              fontFamily: Fonts.bold,
-                              color: Theme.primary,
-                              marginLeft: 22,
-                            }}
-                          >
-                            Reward Balance: {currencySymbol}
-                            {rewardCreditVal.toFixed(2)}
-                          </Text>
-                        )}
-
-                        {Boolean(rewardMember.IsVIP) && (
+                                        {Boolean(rewardMember.IsVIP) && !!useGeneralSettingsStore.getState().settings.vipRuleEnabled && (
                           <>
                             <TouchableOpacity
                               onPress={() => {

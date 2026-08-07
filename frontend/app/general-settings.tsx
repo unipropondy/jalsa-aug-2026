@@ -101,6 +101,7 @@ export default function GeneralSettingsScreen() {
   const [showLoyalty, setShowLoyalty] = useState(settings.showLoyalty !== undefined ? settings.showLoyalty : true);
   const [showRewardPoints, setShowRewardPoints] = useState(settings.showRewardPoints !== undefined ? settings.showRewardPoints : true);
   const [showPromoCode, setShowPromoCode] = useState(settings.showPromoCode !== undefined ? settings.showPromoCode : true);
+  const [vipRuleEnabled, setVipRuleEnabled] = useState(settings.vipRuleEnabled !== undefined ? settings.vipRuleEnabled : false);
 
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -127,6 +128,7 @@ export default function GeneralSettingsScreen() {
     setShowLoyalty(settings.showLoyalty !== undefined ? settings.showLoyalty : true);
     setShowRewardPoints(settings.showRewardPoints !== undefined ? settings.showRewardPoints : true);
     setShowPromoCode(settings.showPromoCode !== undefined ? settings.showPromoCode : true);
+    setVipRuleEnabled(settings.vipRuleEnabled !== undefined ? settings.vipRuleEnabled : false);
 
 
     let initialCheckoutFlow = settings.enableCheckoutFlow;
@@ -225,7 +227,7 @@ export default function GeneralSettingsScreen() {
       showLoyalty,
       showRewardPoints,
       showPromoCode,
-
+      vipRuleEnabled,
     });
     setSaving(false);
 
@@ -337,6 +339,13 @@ export default function GeneralSettingsScreen() {
       name: "Loyalty & Promotions",
       icon: "gift-outline",
       items: [
+        {
+          title: "Enable VIP Flow",
+          desc: "Configure automatic VIP threshold promos and active rules.",
+          icon: "people-circle-outline",
+          value: vipRuleEnabled,
+          onToggle: setVipRuleEnabled,
+        },
         {
           title: "Loyalty Feature",
           desc: "Show the Loyalty button in the POS Summary screen.",
