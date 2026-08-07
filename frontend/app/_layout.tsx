@@ -215,7 +215,7 @@ function SocketToastListener() {
             const UniversalPrinter = require("../components/UniversalPrinter").default;
             await UniversalPrinter.printCheckoutBill(
               saleData,
-              user?.userId || "SYSTEM"
+              useAuthStore.getState().user?.userId || "SYSTEM"
             );
           } catch (err) {
             console.warn("Auto-print on cashier request failed:", err);
