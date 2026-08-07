@@ -23,7 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
-import { API_URL } from "@/constants/Config";
+import { API_URL, setDynamicApiUrl } from "@/constants/Config";
 import { useAuthStore } from "@/stores/authStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -190,6 +190,8 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe]     = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [tempServerUrl, setTempServerUrl] = useState(API_URL);
 
   useFocusEffect(
     useCallback(() => {
@@ -312,6 +314,147 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ⚙️ Server Configuration Button */}
+      <TouchableOpacity
+        style={{
+          position: "absolute",
+          top: Platform.OS === "ios" ? 50 : 30,
+          right: 24,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: "rgba(168,85,247,0.15)",
+          borderWidth: 1,
+          borderColor: "rgba(168,85,247,0.3)",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 10,
+        }}
+        onPress={() => {
+          setTempServerUrl(API_URL);
+          setShowServerModal(true);
+        }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="settings-outline" size={22} color="#F0EEFF" />
+      </TouchableOpacity>
+
+      {/* ⚙️ Server Config Modal */}
+      <Modal
+        visible={showServerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowServerModal(false)}
+      >
+        <Pressable 
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+          onPress={() => setShowServerModal(false)}
+        >
+          <Pressable
+            style={{
+              width: "100%",
+              maxWidth: 400,
+              backgroundColor: "#11092F",
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: "rgba(168,85,247,0.4)",
+              padding: 24,
+              overflow: "hidden",
+            }}
+            onPress={(e) => e.stopPropagation()} // Prevent closing when tapping card
+          >
+            <Text style={{ color: "#F0EEFF", fontSize: 20, fontFamily: Fonts.bold, marginBottom: 8 }}>
+              Server Configuration
+            </Text>
+            <Text style={{ color: "#9B8EC4", fontSize: 13, fontFamily: Fonts.medium, marginBottom: 20 }}>
+              Set your production backend URL (e.g. Railway or Local POS Server IP)
+            </Text>
+
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ color: "#9B8EC4", fontSize: 10, fontFamily: Fonts.bold, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>
+                SERVER API URL
+              </Text>
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#18163A",
+                borderRadius: 14,
+                borderWidth: 1.5,
+                borderColor: "#3D3875",
+                paddingHorizontal: 16,
+                height: 52,
+              }}>
+                <Ionicons name="globe-outline" size={18} color="#5A5080" style={{ marginRight: 10 }} />
+                <TextInput
+                  style={{
+                    flex: 1,
+                    color: "#F0EEFF",
+                    fontSize: 14,
+                    fontFamily: Fonts.medium,
+                  }}
+                  placeholder="https://..."
+                  placeholderTextColor="#5A5080"
+                  value={tempServerUrl}
+                  onChangeText={setTempServerUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 14,
+                  borderWidth: 1.5,
+                  borderColor: "#3D3875",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                onPress={() => setShowServerModal(false)}
+              >
+                <Text style={{ color: "#9B8EC4", fontSize: 14, fontFamily: Fonts.bold }}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                }}
+                onPress={async () => {
+                  if (tempServerUrl.trim()) {
+                    await setDynamicApiUrl(tempServerUrl.trim());
+                  }
+                  setShowServerModal(false);
+                }}
+              >
+                <LinearGradient
+                  colors={["#6D28D9", "#A855F7"]}
+                  style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 14, fontFamily: Fonts.bold }}>Save</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Base gradient ── */}
       <LinearGradient

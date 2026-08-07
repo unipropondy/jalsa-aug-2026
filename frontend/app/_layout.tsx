@@ -59,7 +59,7 @@ SystemUI.setBackgroundColorAsync(Theme.bgMain);
 SplashScreen.preventAutoHideAsync();
 
 import { useGlobalSocketSync } from "@/hooks/useGlobalSocketSync";
-import { API_URL } from "@/constants/Config";
+import { API_URL, loadCustomServerUrl } from "@/constants/Config";
 import { setApiUrl } from "@/stores/paymentSettingsStore";
 
 // 🔗 Sync the shared customer-display package's API_URL with the frontend's
@@ -250,119 +250,13 @@ global.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Pr
   return originalFetch(input, init);
 };
 
-export default function RootLayout() {
-  const [authHydrated, setAuthHydrated] = React.useState(useAuthStore.persist.hasHydrated());
+function AppWrapper({ isPOSReady }: { isPOSReady: boolean }) {
+  useGlobalSocketSync();
 
   React.useEffect(() => {
-    if (authHydrated) return;
-
-    // Subscribe to completion of hydration in Zustand
-    const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
-      setAuthHydrated(true);
-    });
-
-    return unsubFinish;
-  }, [authHydrated]);
-
-  useGlobalSocketSync();
-  const colorScheme = useColorScheme();
-  const router = useRouter();
-  const segments = useSegments();
-  const user = useAuthStore((s) => s.user);
-
-  // 🌐 SILENT API WAKE-UP & CONNECTION PRE-WARM
-  useEffect(() => {
-    const warmupAPI = async () => {
-      if (__DEV__) {
-        console.log(`🌐 [App Startup] Warming up connection to ${API_URL}...`);
-      }
-      try {
-        const start = Date.now();
-        // Trigger DNS lookup, TCP/SSL handshake, and backend container spin-up
-        const res = await fetch(`${API_URL}/health`);
-        const duration = Date.now() - start;
-        if (__DEV__) {
-          console.log(`🌐 [App Startup] API warmed up successfully in ${duration}ms. Status: ${res.status}`);
-        }
-
-        // 🚀 PARALLEL PREFETCH: Load static payment config immediately after connection
-        // is confirmed. This ensures the Payment screen reads from cache instead of
-        // making sequential network requests on every open.
-        const token = useAuthStore.getState().token;
-        if (token) {
-          import("@/stores/paymentSettingsStore").then((m) => {
-            Promise.all([
-              m.usePaymentSettingsStore.getState().fetchSettings(),
-              m.usePaymentSettingsStore.getState().fetchPaymentMethods(),
-            ]).catch(() => {/* Non-fatal — payment screen still works on miss */});
-          });
-        }
-      } catch (err: any) {
-        if (__DEV__) {
-          console.warn(`🌐 [App Startup] API warmup ping failed (expected if backend container is booting up):`, err.message || err);
-        }
-      }
-    };
-    warmupAPI();
+    // 🔗 Sync the shared customer-display package's API_URL with the loaded/configured URL
+    setApiUrl(API_URL);
   }, []);
-
-  const [fontsLoaded, fontError] = useFonts({
-    ...Ionicons.font,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
-    Inter_900Black,
-  });
-
-
-
-  // 🖥️ CUSTOMER DISPLAY: Gate resolves once fonts + settings + socket are ready
-  const isPOSReady = usePOSReadyGate(fontsLoaded || !!fontError);
-
-  // ✅ AUTH GUARD: Redirect based on auth state and role
-  useEffect(() => {
-    if (!fontsLoaded || !authHydrated) return;
-
-    const rootSegment = segments[0];
-    if (rootSegment && rootSegment.startsWith("customer-display")) return;
-
-    const isInsideApp = !!rootSegment && rootSegment !== "login";
-    
-    if (!user && isInsideApp) {
-      // 1. Not logged in -> Go to Login
-      router.replace("/login");
-    } else if (user) {
-      if (user.userGroupId === "DFCF23EE-F6F4-4885-8D26-0056C657595F") {
-        if (rootSegment !== "sales-report") {
-          router.replace("/sales-report");
-        }
-      } else if (!rootSegment || rootSegment === "login") {
-        // 2. Already logged in -> Go to Role-Specific Dashboard
-        const role = user.role;
-        const userName = (user.userName || "").trim().toUpperCase();
-
-        if (userName === "KDS") {
-          router.replace("/kds" as any);
-        } else if (role === "WAITER") {
-          router.replace("/(tabs)/category"); // Waiter starts at Ordering
-        } else {
-          router.replace("/(tabs)/category"); // Others start at POS
-        }
-      }
-    }
-  }, [user, segments, fontsLoaded, authHydrated]);
-
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && authHydrated) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError, authHydrated]);
-
-  if ((!fontsLoaded && !fontError) || !authHydrated) {
-    return null;
-  }
 
   return (
     <SafeAreaProvider>
@@ -404,4 +298,126 @@ export default function RootLayout() {
       </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+export default function RootLayout() {
+  const [authHydrated, setAuthHydrated] = React.useState(useAuthStore.persist.hasHydrated());
+  const [urlLoaded, setUrlLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    if (authHydrated) return;
+
+    // Subscribe to completion of hydration in Zustand
+    const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
+      setAuthHydrated(true);
+    });
+
+    return unsubFinish;
+  }, [authHydrated]);
+
+  React.useEffect(() => {
+    loadCustomServerUrl().then(() => {
+      setUrlLoaded(true);
+    });
+  }, []);
+
+  const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const user = useAuthStore((s) => s.user);
+
+  // 🌐 SILENT API WAKE-UP & CONNECTION PRE-WARM
+  useEffect(() => {
+    if (!urlLoaded) return;
+    const warmupAPI = async () => {
+      if (__DEV__) {
+        console.log(`🌐 [App Startup] Warming up connection to ${API_URL}...`);
+      }
+      try {
+        const start = Date.now();
+        // Trigger DNS lookup, TCP/SSL handshake, and backend container spin-up
+        const res = await fetch(`${API_URL}/health`);
+        const duration = Date.now() - start;
+        if (__DEV__) {
+          console.log(`🌐 [App Startup] API warmed up successfully in ${duration}ms. Status: ${res.status}`);
+        }
+
+        // 🚀 PARALLEL PREFETCH: Load static payment config immediately after connection
+        // is confirmed. This ensures the Payment screen reads from cache instead of
+        // making sequential network requests on every open.
+        const token = useAuthStore.getState().token;
+        if (token) {
+          import("@/stores/paymentSettingsStore").then((m) => {
+            Promise.all([
+              m.usePaymentSettingsStore.getState().fetchSettings(),
+              m.usePaymentSettingsStore.getState().fetchPaymentMethods(),
+            ]).catch(() => {/* Non-fatal — payment screen still works on miss */});
+          });
+        }
+      } catch (err: any) {
+        if (__DEV__) {
+          console.warn(`🌐 [App Startup] API warmup ping failed (expected if backend container is booting up):`, err.message || err);
+        }
+      }
+    };
+    warmupAPI();
+  }, [urlLoaded]);
+
+  const [fontsLoaded, fontError] = useFonts({
+    ...Ionicons.font,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Inter_900Black,
+  });
+
+  // 🖥️ CUSTOMER DISPLAY: Gate resolves once fonts + settings + socket are ready
+  const isPOSReady = usePOSReadyGate(fontsLoaded || !!fontError);
+
+  // ✅ AUTH GUARD: Redirect based on auth state and role
+  useEffect(() => {
+    if (!fontsLoaded || !authHydrated || !urlLoaded) return;
+
+    const rootSegment = segments[0];
+    if (rootSegment && rootSegment.startsWith("customer-display")) return;
+
+    const isInsideApp = !!rootSegment && rootSegment !== "login";
+    
+    if (!user && isInsideApp) {
+      // 1. Not logged in -> Go to Login
+      router.replace("/login");
+    } else if (user) {
+      if (user.userGroupId === "DFCF23EE-F6F4-4885-8D26-0056C657595F") {
+        if (rootSegment !== "sales-report") {
+          router.replace("/sales-report");
+        }
+      } else if (!rootSegment || rootSegment === "login") {
+        // 2. Already logged in -> Go to Role-Specific Dashboard
+        const role = user.role;
+        const userName = (user.userName || "").trim().toUpperCase();
+
+        if (userName === "KDS") {
+          router.replace("/kds" as any);
+        } else if (role === "WAITER") {
+          router.replace("/(tabs)/category"); // Waiter starts at Ordering
+        } else {
+          router.replace("/(tabs)/category"); // Others start at POS
+        }
+      }
+    }
+  }, [user, segments, fontsLoaded, authHydrated, urlLoaded]);
+
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && authHydrated && urlLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError, authHydrated, urlLoaded]);
+
+  if ((!fontsLoaded && !fontError) || !authHydrated || !urlLoaded) {
+    return null;
+  }
+
+  return <AppWrapper isPOSReady={isPOSReady} />;
 }
