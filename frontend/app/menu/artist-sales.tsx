@@ -1,4 +1,4 @@
-﻿import { API_URL } from "@/constants/Config";
+import { API_URL } from "@/constants/Config";
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { useAuthStore } from "@/stores/authStore";
@@ -349,8 +349,8 @@ export default function ArtistSalesScreen() {
           <View style={[styles.activeDot, { backgroundColor: isDayActive ? "#3B82F6" : "#78716C" }]} />
           <Text style={[styles.activeDayText, { color: isDayActive ? "#93C5FD" : "#78716C" }]}>
             {isDayActive
-              ? (isActiveDayView ? `Live Day: ${activeDay}` : `Viewing: ${fromDate} â€“ ${toDate}`)
-              : "No Active Day â€” Historical Mode"}
+              ? (isActiveDayView ? `Live Day: ${activeDay}` : `Viewing: ${fromDate} – ${toDate}`)
+              : "No Active Day — Historical Mode"}
           </Text>
           {isDayActive && <Text style={styles.liveUpdatingText}>Live updating...</Text>}
         </View>
@@ -401,21 +401,21 @@ export default function ArtistSalesScreen() {
               <View key={i} style={styles.eventRow}>
                 {ev.milestoneReached ? (
                   <View style={styles.eventMilestoneRow}>
-                    <Text style={styles.eventCelebration}>ðŸŽ‰</Text>
+                    <Text style={styles.eventCelebration}>🎉</Text>
                     <Text style={styles.eventText}>
-                      <Text style={{ fontFamily: Fonts.black }}>{ev.artistName}</Text> earned <Text style={styles.earnedText}>+${activeRule?.BonusAmount || 50} Bonus</Text>!
+                      <Text style={{ fontFamily: Fonts.bold }}>{ev.artistName}</Text> earned <Text style={styles.earnedText}>+${activeRule?.BonusAmount || 50} Bonus</Text>!
                     </Text>
                     <Text style={styles.eventTime}>{ev.time}</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                    <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
+                    <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flex: 1, marginRight: 6 }}>
                       <Text style={styles.eventTime}>{ev.time}</Text>
-                      <Text style={styles.eventText}>
-                        <Text style={{ fontFamily: Fonts.bold }}>{ev.artistName}</Text> Â· Today's Sales: <Text style={{ fontFamily: Fonts.bold }}>${ev.amount.toFixed(0)}</Text>
+                      <Text style={styles.eventText} numberOfLines={1}>
+                        <Text style={{ fontFamily: Fonts.bold }}>{ev.artistName}</Text> • Today's Sales: <Text style={{ fontFamily: Fonts.bold }}>${ev.amount.toFixed(0)}</Text>
                       </Text>
                     </View>
-                    <Text style={styles.eventRemainingText}>Need ${ev.remaining} for next bonus</Text>
+                    <Text style={styles.eventRemainingText} numberOfLines={1}>Need ${ev.remaining} for next bonus</Text>
                   </View>
                 )}
               </View>

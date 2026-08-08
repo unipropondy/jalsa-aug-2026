@@ -1,4 +1,4 @@
-﻿import { API_URL } from "@/constants/Config";
+import { API_URL } from "@/constants/Config";
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { useAuthStore } from "@/stores/authStore";
@@ -37,11 +37,11 @@ interface ArtistRow {
 }
 
 const WALLET_STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  Paid:             { bg: "rgba(16,185,129,0.15)",  text: "#10B981", label: "ðŸŸ¢ Settled" },
-  "Partially Paid": { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", label: "ðŸŸ  Partial" },
-  Pending:          { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", label: "ðŸ”´ Due" },
-  Accruing:         { bg: "rgba(59,130,246,0.15)",  text: "#3B82F6", label: "ðŸ”µ Live Day" },
-  "No Bonus":      { bg: "rgba(255,255,255,0.06)",  text: "#5A5080", label: "âšª Empty" },
+  Paid:             { bg: "rgba(16,185,129,0.15)",  text: "#10B981", label: "🟢 Settled" },
+  "Partially Paid": { bg: "rgba(245,158,11,0.15)",  text: "#F59E0B", label: "🟡 Partial" },
+  Pending:          { bg: "rgba(239,68,68,0.15)",   text: "#EF4444", label: "🔴 Due" },
+  Accruing:         { bg: "rgba(59,130,246,0.15)",  text: "#3B82F6", label: "🔵 Live Day" },
+  "No Bonus":      { bg: "rgba(255,255,255,0.06)",  text: "#5A5080", label: "⚪ Empty" },
 };
 
 export default function ArtistManagementScreen() {
@@ -119,24 +119,24 @@ export default function ArtistManagementScreen() {
   const totalAllTimePending = Object.values(pendingByArtist).reduce((s, v) => s + v, 0);
 
   // Business Day State Logic
-  let dayStateLabel = "âšª Fully Settled";
+  let dayStateLabel = "⚪ Fully Settled";
   let dayStateColor = "#78716C";
   let dayStateIcon = "ellipse-outline";
   let dayStateDesc = "All artist wallets are settled.";
 
   if (isDayActive) {
-    dayStateLabel = "ðŸŸ¢ Business Day Active";
+    dayStateLabel = "🟢 Business Day Active";
     dayStateColor = "#16A34A";
     dayStateIcon = "play-circle-outline";
     dayStateDesc = "Sales are accumulating automatically. Live Sales Updating...";
   } else if (!isDayActive) {
     if (artists.some(a => a.totalSales > 0 && a.bonusEarned === 0 && activeRule)) {
-      dayStateLabel = "ðŸŸ¡ Awaiting Calculation";
+      dayStateLabel = "🟡 Awaiting Calculation";
       dayStateColor = "#CA8A04";
       dayStateIcon = "time-outline";
       dayStateDesc = "Business day closed. Settle live calculations.";
     } else if (totalAllTimePending > 0) {
-      dayStateLabel = "ðŸ”µ Bonus Calculated";
+      dayStateLabel = "🔵 Bonus Calculated";
       dayStateColor = "#2563EB";
       dayStateIcon = "checkbox-outline";
       dayStateDesc = "Wallets updated. Ready for settlement.";
@@ -169,7 +169,7 @@ export default function ArtistManagementScreen() {
           <Text style={styles.headerTitle}>Artist Hub</Text>
           <Text style={styles.headerSub}>
             {activeRule
-              ? `Rule: Every $${activeRule.ThresholdAmount} âž” $${activeRule.BonusAmount} Bonus`
+              ? `Rule: Every $${activeRule.ThresholdAmount} ➔ $${activeRule.BonusAmount} Bonus`
               : "No active bonus rule"}
           </Text>
         </View>
@@ -194,7 +194,7 @@ export default function ArtistManagementScreen() {
                 {dayStateLabel}
               </Text>
               {activeDay && (
-                <Text style={styles.dayDateText}>Â· {activeDay}</Text>
+                <Text style={styles.dayDateText}>• {activeDay}</Text>
               )}
             </View>
             <Text style={styles.dayBannerSub}>{dayStateDesc}</Text>
@@ -217,9 +217,9 @@ export default function ArtistManagementScreen() {
               <Ionicons name="alert-circle" size={22} color="#DC2626" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.pendingAlertTitle}>ðŸ’° Bonus Due</Text>
+              <Text style={styles.pendingAlertTitle}>💰 Bonus Due</Text>
               <Text style={styles.pendingAlertSub}>
-                {artistsWithPending.length} Artist{artistsWithPending.length > 1 ? "s" : ""} Â· ${totalAllTimePending.toFixed(2)} due payout
+                {artistsWithPending.length} Artist{artistsWithPending.length > 1 ? "s" : ""} • ${totalAllTimePending.toFixed(2)} due payout
               </Text>
             </View>
             <View style={styles.settleBtn}>
@@ -272,7 +272,7 @@ export default function ArtistManagementScreen() {
             <View style={styles.listHeaderRow}>
               <Text style={styles.sectionTitle}>Artist Bonus Registry</Text>
               <TouchableOpacity onPress={() => router.push("/menu/artist-sales" as any)}>
-                <Text style={styles.listHeaderLink}>View Live Sales âž”</Text>
+                <Text style={styles.listHeaderLink}>View Live Sales ➔</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.artistListCard}>

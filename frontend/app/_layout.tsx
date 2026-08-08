@@ -595,7 +595,6 @@ export default function RootLayout() {
             <Stack.Screen name="StaffAttendance" />
             <Stack.Screen name="loyalty" />
             <Stack.Screen name="loyaltyConfig" />
-            <Stack.Screen name="menu/rewardMaster" />
             <Stack.Screen name="general-settings" />
             <Stack.Screen name="terminal-settings" />
             <Stack.Screen name="customer-display" />

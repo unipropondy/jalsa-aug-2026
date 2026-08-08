@@ -1,4 +1,4 @@
-﻿import { API_URL } from "@/constants/Config";
+import { API_URL } from "@/constants/Config";
 import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { useAuthStore } from "@/stores/authStore";
@@ -29,16 +29,16 @@ import * as Print from "expo-print";
 
 const pad = (n: number) => n.toString().padStart(2, "0");
 const fmtDate = (raw: string | null) => {
-  if (!raw) return "â€”";
+  if (!raw) return "—";
   const d = new Date(raw);
   return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 };
 
 const WALLET_STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  Paid:             { bg: "#DCFCE7", text: "#16A34A", label: "ðŸŸ¢ Settled" },
-  "Partially Paid": { bg: "#FFF7ED", text: "#A855F7", label: "ðŸŸ  Partial Payment" },
-  Pending:          { bg: "#FEE2E2", text: "#DC2626", label: "ðŸŸ¡ Due Payment" },
-  "No Bonus":      { bg: "#F5F5F4", text: "#78716C", label: "âšª Wallet Empty" },
+  Paid:             { bg: "#DCFCE7", text: "#16A34A", label: "🟢 Settled" },
+  "Partially Paid": { bg: "#FFF7ED", text: "#A855F7", label: "🟡 Partial Payment" },
+  Pending:          { bg: "#FEE2E2", text: "#DC2626", label: "🔴 Due Payment" },
+  "No Bonus":      { bg: "#F5F5F4", text: "#78716C", label: "⚪ Wallet Empty" },
 };
 
 export default function ArtistDetailScreen() {
@@ -136,7 +136,7 @@ export default function ArtistDetailScreen() {
       icon: "bar-chart",
       color: "#2563EB",
       amount: s.Amount,
-      desc: `Bill ${s.BillNo || "Cashbox"} Â· ${s.ItemName || "Event sales"}`
+      desc: `Bill ${s.BillNo || "Cashbox"} • ${s.ItemName || "Event sales"}`
     });
   });
 
@@ -160,7 +160,7 @@ export default function ArtistDetailScreen() {
       icon: "cash",
       color: "#16A34A",
       amount: p.PaymentAmount,
-      desc: `Paid by ${p.PaidBy} Â· Method: ${p.Remarks || "Cash"}`
+      desc: `Paid by ${p.PaidBy} • Method: ${p.Remarks || "Cash"}`
     });
   });
 
@@ -331,11 +331,11 @@ export default function ArtistDetailScreen() {
             ))}
           </View>
 
-          {/* â”€â”€ ACTIVE BONUS RULE CARD â”€â”€ */}
+          {/* --- ACTIVE BONUS RULE CARD --- */}
           {activeRule && (
             <View style={styles.ruleCard}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={styles.cardTitle}>âš™ï¸ Bonus Rule</Text>
+                <Text style={styles.cardTitle}>⚙️ Bonus Rule</Text>
                 {activeRule.ArtistDishId && (
                   <View style={styles.customBadge}>
                     <Text style={styles.customBadgeText}>Custom Rule</Text>
@@ -344,17 +344,17 @@ export default function ArtistDetailScreen() {
               </View>
               <View style={styles.ruleDetails}>
                 <Text style={styles.ruleText}>
-                  Every <Text style={{ fontFamily: Fonts.black }}>${activeRule.ThresholdAmount}</Text> sales âž” earn <Text style={{ fontFamily: Fonts.black, color: "#16A34A" }}>${activeRule.BonusAmount}</Text> bonus ({activeRule.IsRepeating ? "Repeating" : "One-time"}).
+                  Every <Text style={{ fontFamily: Fonts.black }}>${activeRule.ThresholdAmount}</Text> sales ➔ earn <Text style={{ fontFamily: Fonts.black, color: "#16A34A" }}>${activeRule.BonusAmount}</Text> bonus ({activeRule.IsRepeating ? "Repeating" : "One-time"}).
                 </Text>
               </View>
             </View>
           )}
 
-          {/* â”€â”€ PROGRESS CARD â”€â”€ */}
+          {/* --- PROGRESS CARD --- */}
           {progress && (
             <View style={styles.progressCard}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-                <Text style={styles.cardTitle}>ðŸ“ˆ Next Bonus Target</Text>
+                <Text style={styles.cardTitle}>📈 Next Target</Text>
                 <Text style={styles.rewardTag}>+${progress.nextBonus.toFixed(0)} Next Reward</Text>
               </View>
               <View style={styles.progressStats}>
@@ -380,12 +380,12 @@ export default function ArtistDetailScreen() {
             </View>
           )}
 
-          {/* â”€â”€ STICKY PAYOUT BUTTON â”€â”€ */}
+          {/* --- STICKY PAYOUT BUTTON --- */}
           <View style={{ paddingHorizontal: 16, marginVertical: 14 }}>
             {totalOutstanding > 0 ? (
               <TouchableOpacity style={styles.payBtn} onPress={openPayModal}>
                 <Ionicons name="cash" size={20} color="#fff" />
-                <Text style={styles.payBtnText}>Pay Wallet Bonus Â· ${totalOutstanding.toFixed(2)} due</Text>
+                <Text style={styles.payBtnText}>Pay Wallet Bonus • ${totalOutstanding.toFixed(2)} due</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.disabledPayBtn}>
@@ -395,8 +395,8 @@ export default function ArtistDetailScreen() {
             )}
           </View>
 
-          {/* â”€â”€ UNIFIED TIMELINE â”€â”€ */}
-          <Text style={styles.sectionHeader}>ðŸ•’ Wallet Event Timeline</Text>
+          {/* ── UNIFIED TIMELINE ── */}
+          <Text style={styles.sectionHeader}>🕒 Wallet Event Timeline</Text>
           <View style={styles.timelineCard}>
             {sortedTimeline.length === 0 ? (
               <Text style={styles.emptyTimelineText}>No wallet events recorded.</Text>
@@ -422,13 +422,13 @@ export default function ArtistDetailScreen() {
             )}
           </View>
 
-          {/* â”€â”€ EXPANDABLE SECTIONS â”€â”€ */}
-          <Text style={styles.sectionHeader}>ðŸ“Š Details & Ledgers</Text>
+          {/* ── EXPANDABLE SECTIONS ── */}
+          <Text style={styles.sectionHeader}>📊 Details & Ledgers</Text>
 
           {/* 1. Grouped Sales Details */}
           <View style={styles.dropdownCard}>
             <TouchableOpacity style={styles.dropdownHeader} onPress={() => toggleSection("sales")}>
-              <Text style={styles.dropdownTitle}>ðŸ“Š Sales Log</Text>
+              <Text style={styles.dropdownTitle}>📊 Sales Log</Text>
               <Ionicons name={expandedSection === "sales" ? "chevron-up" : "chevron-down"} size={18} color={Theme.textSecondary} />
             </TouchableOpacity>
             {expandedSection === "sales" && (
@@ -437,7 +437,7 @@ export default function ArtistDetailScreen() {
                   <View key={idx} style={styles.logRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.logBillText}>Bill {s.BillNo || "Direct Stage"}</Text>
-                      <Text style={styles.logSubText}>{s.ItemName} Â· Qty {s.Qty}</Text>
+                      <Text style={styles.logSubText}>{s.ItemName} • Qty {s.Qty}</Text>
                     </View>
                     <Text style={styles.logAmountText}>+${Number(s.Amount).toFixed(2)}</Text>
                   </View>
@@ -449,7 +449,7 @@ export default function ArtistDetailScreen() {
           {/* 2. Payout History */}
           <View style={styles.dropdownCard}>
             <TouchableOpacity style={styles.dropdownHeader} onPress={() => toggleSection("payouts")}>
-              <Text style={styles.dropdownTitle}>ðŸ’µ Payout History (Bank Logs)</Text>
+              <Text style={styles.dropdownTitle}>💵 Payout History (Bank Logs)</Text>
               <Ionicons name={expandedSection === "payouts" ? "chevron-up" : "chevron-down"} size={18} color={Theme.textSecondary} />
             </TouchableOpacity>
             {expandedSection === "payouts" && (
@@ -458,7 +458,7 @@ export default function ArtistDetailScreen() {
                   <View key={idx} style={styles.logRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.logBillText}>Paid to Artist ({p.Remarks || "Cash"})</Text>
-                      <Text style={styles.logSubText}>{fmtDate(p.PaidDate)} Â· by {p.PaidBy}</Text>
+                      <Text style={styles.logSubText}>{fmtDate(p.PaidDate)} • by {p.PaidBy}</Text>
                     </View>
                     <Text style={[styles.logAmountText, { color: "#16A34A" }]}>-${Number(p.PaymentAmount).toFixed(2)}</Text>
                   </View>
@@ -470,7 +470,7 @@ export default function ArtistDetailScreen() {
           {/* 3. Bonus Ledger */}
           <View style={styles.dropdownCard}>
             <TouchableOpacity style={styles.dropdownHeader} onPress={() => toggleSection("ledger")}>
-              <Text style={styles.dropdownTitle}>ðŸ† Earned Bonus Ledger</Text>
+              <Text style={styles.dropdownTitle}>🏆 Earned Bonus Ledger</Text>
               <Ionicons name={expandedSection === "ledger" ? "chevron-up" : "chevron-down"} size={18} color={Theme.textSecondary} />
             </TouchableOpacity>
             {expandedSection === "ledger" && (
@@ -479,7 +479,7 @@ export default function ArtistDetailScreen() {
                   <View key={idx} style={styles.logRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.logBillText}>Milestone Reached</Text>
-                      <Text style={styles.logSubText}>{fmtDate(b.SalesFromDate)} âž” {fmtDate(b.SalesToDate)} Â· Sales: ${b.TotalSales}</Text>
+                      <Text style={styles.logSubText}>{fmtDate(b.SalesFromDate)} ➔ {fmtDate(b.SalesToDate)} • Sales: ${b.TotalSales}</Text>
                     </View>
                     <Text style={[styles.logAmountText, { color: "#A855F7" }]}>+${Number(b.BonusEarned).toFixed(2)}</Text>
                   </View>
@@ -491,7 +491,7 @@ export default function ArtistDetailScreen() {
           {/* 4. Statistics */}
           <View style={styles.dropdownCard}>
             <TouchableOpacity style={styles.dropdownHeader} onPress={() => toggleSection("stats")}>
-              <Text style={styles.dropdownTitle}>ðŸ“ˆ Wallet Statistics & Insights</Text>
+              <Text style={styles.dropdownTitle}>📈 Wallet Statistics & Insights</Text>
               <Ionicons name={expandedSection === "stats" ? "chevron-up" : "chevron-down"} size={18} color={Theme.textSecondary} />
             </TouchableOpacity>
             {expandedSection === "stats" && (
