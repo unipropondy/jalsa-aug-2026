@@ -161,6 +161,12 @@ const parseCsv = (value) => String(value || "")
 const normalizePayMode = (paymentMethod = "CASH") => {
   const raw = String(paymentMethod || "CASH").toUpperCase().trim();
   
+  if (raw === "Q-R" || raw === "Q.R.") return "QR";
+  if (raw === "PAY_NOW") return "PAYNOW";
+  if (raw === "U-P-I") return "UPI";
+  if (raw === "G-PAY") return "GPAY";
+  if (raw === "P-H-O-N-E") return "PHONE";
+  if (raw === "P-A-Y-T-M") return "PAYTM";
   if (raw.includes("CASH") || raw === "CAS") return "CASH";
   if (raw.includes("YEAHPAY PAYNOW") || raw === "YEAHPAY PAYNOW") return "Yeahpay Paynow";
   if (raw.includes("YEAHPAY CARD") || raw === "YEAHPAY CARD") return "Yeahpay Card";
@@ -2792,7 +2798,20 @@ router.get("/payment-methods", async (req, res) => {
         FROM [dbo].[Paymode] 
         ORDER BY Position ASC
       `);
-      res.json(result.recordset || []);
+      const mapped = (result.recordset || []).map(item => {
+        if (!item.payMode) return item;
+        const trimmedMode = item.payMode.trim().toUpperCase();
+        let virtualMode = item.payMode.trim();
+        if (trimmedMode === 'QR') virtualMode = 'Q-R';
+        else if (trimmedMode === 'PAYNOW') virtualMode = 'PAY_NOW';
+        else if (trimmedMode === 'PAY-NOW') virtualMode = 'PAY_NOW';
+        else if (trimmedMode === 'UPI') virtualMode = 'U-P-I';
+        else if (trimmedMode === 'GPAY') virtualMode = 'G-PAY';
+        else if (trimmedMode === 'PHONE') virtualMode = 'P-H-O-N-E';
+        else if (trimmedMode === 'PAYTM') virtualMode = 'P-A-Y-T-M';
+        return { ...item, payMode: virtualMode };
+      });
+      res.json(mapped);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

@@ -18,12 +18,28 @@ const getLocalBackendIP = (): string => {
 
 const localIP = getLocalBackendIP();
 
-export const API_URL = __DEV__
-  ? `http://${localIP}:3000`
-  : (process.env.EXPO_PUBLIC_API_URL ??
-     (Platform.OS === "web" && typeof window !== "undefined"
-       ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ""}`
-       : "https://jalsa-aug-2026-production.up.railway.app"));
+const getApiUrl = (): string => {
+  if (__DEV__) {
+    return `http://${localIP}:3000`;
+  }
+  
+  let envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) {
+    envUrl = envUrl.trim();
+    if (!/^https?:\/\//i.test(envUrl)) {
+      envUrl = `https://${envUrl}`;
+    }
+    return envUrl;
+  }
+  
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ""}`;
+  }
+  
+  return "https://jalsa-aug-2026-production.up.railway.app";
+};
+
+export const API_URL = getApiUrl();
 
 if (__DEV__) {
   console.log(`🌐 [Config] API_URL: ${API_URL} | Platform: ${Platform.OS}`);

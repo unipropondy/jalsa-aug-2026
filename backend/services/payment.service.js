@@ -43,10 +43,23 @@ async function processSplitPayments({
     }
 
     // Resolve paymode
-    let dbPaymode = activePaymodes.find(pm => 
-      pm.Position === Number(payment.payModeId) || 
-      String(pm.PayMode).trim().toUpperCase() === String(payment.payModeId || payment.payMode || "").trim().toUpperCase()
-    );
+    let dbPaymode = activePaymodes.find(pm => {
+      if (pm.Position === Number(payment.payModeId)) return true;
+      const pmUpper = String(pm.PayMode).trim().toUpperCase();
+      const inputMode = String(payment.payModeId || payment.payMode || "").trim().toUpperCase();
+      if (pmUpper === inputMode) return true;
+      
+      // Virtual mapping fallbacks
+      if (pmUpper === 'QR' && (inputMode === 'Q-R' || inputMode === 'Q.R.')) return true;
+      if (pmUpper === 'PAYNOW' && inputMode === 'PAY_NOW') return true;
+      if (pmUpper === 'PAY-NOW' && inputMode === 'PAY_NOW') return true;
+      if (pmUpper === 'UPI' && inputMode === 'U-P-I') return true;
+      if (pmUpper === 'GPAY' && inputMode === 'G-PAY') return true;
+      if (pmUpper === 'PHONE' && inputMode === 'P-H-O-N-E') return true;
+      if (pmUpper === 'PAYTM' && inputMode === 'P-A-Y-T-M') return true;
+      
+      return false;
+    });
 
     if (!dbPaymode) {
       throw new Error(`Invalid or inactive payment mode specified: ${payment.payModeId || payment.payMode}`);

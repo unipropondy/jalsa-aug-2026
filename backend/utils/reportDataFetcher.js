@@ -6,6 +6,12 @@ const { getCompanySettings } = require('./settingsCache');
  */
 const normalizePayMode = (paymentMethod = "CASH") => {
   const raw = String(paymentMethod || "CASH").toUpperCase().trim();
+  if (raw === "Q-R" || raw === "Q.R.") return "QR";
+  if (raw === "PAY_NOW") return "PAYNOW";
+  if (raw === "U-P-I") return "UPI";
+  if (raw === "G-PAY") return "GPAY";
+  if (raw === "P-H-O-N-E") return "PHONE";
+  if (raw === "P-A-Y-T-M") return "PAYTM";
   // MUST check cashbox BEFORE cash — 'CASH BOX ENTRY'.includes('CASH') is true!
   if (raw === "CASHBOX" || raw === "CASH BOX" || raw === "CASH BOX ENTRY") return "CASH BOX ENTRY";
   if (raw === "CASH" || raw === "CAS" || raw === "1") return "CASH";
