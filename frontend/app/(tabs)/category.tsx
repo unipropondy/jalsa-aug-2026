@@ -5,6 +5,7 @@ import { Fonts } from "@/constants/Fonts";
 import { Theme } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import API from "../../api";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -490,8 +491,8 @@ export default function Category() {
 
   const checkActiveBusinessDay = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/settlement/active-day`);
-      const data = await res.json();
+      const res = await API.get("/settlement/active-day");
+      const data = res.data;
       if (data.success && data.active && data.startDate) {
         setIsDayStarted(true);
         setActiveBusinessDay(data.startDate);
@@ -523,16 +524,12 @@ export default function Category() {
 
     setIsStartingDay(true);
     try {
-      const res = await fetch(`${API_URL}/api/settlement/day-start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startDate: selectedBusinessDate,
-          username: user?.userName || user?.username || "admin",
-        }),
+      const res = await API.post("/settlement/day-start", {
+        startDate: selectedBusinessDate,
+        username: user?.userName || user?.username || "admin",
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = res.data;
+      if (data.success) {
         await AsyncStorage.setItem(
           "selected_business_date",
           selectedBusinessDate,
@@ -551,12 +548,12 @@ export default function Category() {
           subtitle: data.error || "Could not start business day.",
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to start day:", err);
       showToast({
         type: "error",
-        message: "Network Error",
-        subtitle: "Failed to connect to the server.",
+        message: "Day Start Failed",
+        subtitle: err.response?.data?.error || err.message || "Failed to connect to the server.",
       });
     } finally {
       setIsStartingDay(false);
