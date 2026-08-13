@@ -62,7 +62,7 @@ async function getArtistSales(pool, artistDishId, artistName, fromDate, toDate) 
     WITH AppSales AS (
       SELECT
         ISNULL(SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED'
-                        THEN CAST(ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0) AS DECIMAL(18,2))
+                        THEN CAST(CASE WHEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) END AS DECIMAL(18,2))
                         ELSE 0 END), 0) AS total
       FROM SettlementHeader sh
       INNER JOIN SettlementItemDetail sid ON sh.SettlementID = sid.SettlementID
@@ -138,7 +138,7 @@ async function bulkGetArtistSales(pool, fromDate, toDate) {
       SELECT
         d.DishId,
         ISNULL(SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED'
-                        THEN CAST(ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0) AS DECIMAL(18,2))
+                        THEN CAST(CASE WHEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) END AS DECIMAL(18,2))
                         ELSE 0 END), 0) AS total
       FROM SettlementHeader sh
       INNER JOIN SettlementItemDetail sid ON sh.SettlementID = sid.SettlementID
@@ -680,7 +680,7 @@ router.get('/artist/:dishId', async (req, res) => {
           sh.BillNo,
           sid.DishName AS ItemName,
           sid.Qty,
-          CAST(sid.Qty * sid.Price AS DECIMAL(18,2)) AS Amount
+          CAST(CASE WHEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) END AS DECIMAL(18,2)) AS Amount
         FROM SettlementHeader sh
         INNER JOIN SettlementItemDetail sid ON sh.SettlementID = sid.SettlementID
         INNER JOIN DishMaster d ON (

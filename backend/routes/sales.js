@@ -783,7 +783,7 @@ router.get("/category", async (req, res) => {
             ISNULL(NULLIF(LTRIM(RTRIM(sid.CategoryName)), ''), ISNULL(cm.CategoryName, 'Unmapped')) AS categoryName,
             SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) AS decimal(18, 3)) ELSE 0 END) AS totalQty,
             SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') = 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) AS decimal(18, 3)) ELSE 0 END) AS voidQty,
-            SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0) AS decimal(18, 2)) ELSE 0 END) AS totalAmount
+            SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(CASE WHEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) END AS decimal(18, 2)) ELSE 0 END) AS totalAmount
           FROM SettlementHeader sh
           INNER JOIN SettlementItemDetail sid ON sh.SettlementID = sid.SettlementID
           LEFT JOIN DishMaster d ON sid.DishId = d.DishId
@@ -883,7 +883,7 @@ router.get("/dish", async (req, res) => {
             ISNULL(NULLIF(LTRIM(RTRIM(sid.SubCategoryName)), ''), ISNULL(dg.DishGroupName, 'Unmapped')) AS subCategoryName,
             SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) AS decimal(18, 3)) ELSE 0 END) AS totalQty,
             SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') = 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) AS decimal(18, 3)) ELSE 0 END) AS voidQty,
-            SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0) AS decimal(18, 2)) ELSE 0 END) AS totalAmount
+            SUM(CASE WHEN ISNULL(sid.Status, 'NORMAL') <> 'VOIDED' THEN CAST(CASE WHEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) - (CASE WHEN sid.DiscountType = 'percentage' THEN (ISNULL(sid.Qty, 0) * ISNULL(sid.Price, 0)) * (ISNULL(sid.DiscountAmount, 0) / 100.0) ELSE ISNULL(sid.Qty, 0) * (CASE WHEN ISNULL(sid.DiscountAmount, 0) > ISNULL(sid.Price, 0) THEN ISNULL(sid.Price, 0) ELSE ISNULL(sid.DiscountAmount, 0) END) END) - ISNULL(sid.VIPDiscountAmount, 0) END AS decimal(18, 2)) ELSE 0 END) AS totalAmount
           FROM SettlementHeader sh
           INNER JOIN SettlementItemDetail sid ON sh.SettlementID = sid.SettlementID
           LEFT JOIN DishMaster d ON sid.DishId = d.DishId
@@ -1086,7 +1086,7 @@ router.get("/artist-target", async (req, res) => {
         a.CreatedDate
       FROM dishOrderItemShare a
       OUTER APPLY (
-        SELECT SUM(CAST(ISNULL(b.Qty, 0) * ISNULL(b.Price, 0) AS decimal(18,2))) AS Achieved
+        SELECT SUM(CAST(CASE WHEN (ISNULL(b.Qty, 0) * ISNULL(b.Price, 0)) - (CASE WHEN b.DiscountType = 'percentage' THEN (ISNULL(b.Qty, 0) * ISNULL(b.Price, 0)) * (ISNULL(b.DiscountAmount, 0) / 100.0) ELSE ISNULL(b.Qty, 0) * (CASE WHEN ISNULL(b.DiscountAmount, 0) > ISNULL(b.Price, 0) THEN ISNULL(b.Price, 0) ELSE ISNULL(b.DiscountAmount, 0) END) END) - ISNULL(b.VIPDiscountAmount, 0) < 0 THEN 0 ELSE (ISNULL(b.Qty, 0) * ISNULL(b.Price, 0)) - (CASE WHEN b.DiscountType = 'percentage' THEN (ISNULL(b.Qty, 0) * ISNULL(b.Price, 0)) * (ISNULL(b.DiscountAmount, 0) / 100.0) ELSE ISNULL(b.Qty, 0) * (CASE WHEN ISNULL(b.DiscountAmount, 0) > ISNULL(b.Price, 0) THEN ISNULL(b.Price, 0) ELSE ISNULL(b.DiscountAmount, 0) END) END) - ISNULL(b.VIPDiscountAmount, 0) END AS decimal(18,2))) AS Achieved
         FROM settlementitemdetail b
         INNER JOIN SettlementHeader sh ON b.SettlementID = sh.SettlementID
         WHERE (
