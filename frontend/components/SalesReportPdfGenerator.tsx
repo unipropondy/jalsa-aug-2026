@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sales Report PDF Generation Example Component
  * Shows how to integrate professional PDF download/email features
  * 
@@ -33,6 +33,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { Theme } from "../constants/theme";
 
 interface SalesReportPdfProps {
   onClose?: () => void;

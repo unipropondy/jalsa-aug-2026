@@ -1139,7 +1139,7 @@ export default function SalesReport() {
           acc.TotalVoids += s.VoidQty || 0;
           acc.TotalVoidAmount += s.VoidAmount || 0;
           acc.TotalVIPDiscount += s.VIPDiscountAmount || 0;
-          acc.TotalDiscount += s.DiscountAmount || 0;
+          acc.TotalDiscount += Math.max(0, (s.DiscountAmount || 0) - (s.VIPDiscountAmount || 0)) + (s.TotalLineItemDiscountAmount || 0);
           acc.ServiceCharge += Number(s.ServiceCharge) || 0;
           acc.TotalTax += Number(s.TotalTax) || 0;
         }
