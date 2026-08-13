@@ -34,7 +34,7 @@ async function fetchFullReportData(startDateStr, endDateStr, pool) {
   const sgtEnd = `DATEADD(DAY, 1, CAST('${endDateStr}' AS DATE))`;
 
   // 1. Fetch combined sales list (same logic as /all endpoint)
-  const shWhere = `sh.start_date >= CAST('${startDateStr}' AS DATE) AND sh.start_date <= CAST('${endDateStr}' AS DATE)`;
+  const shWhere = `CAST(ISNULL(sh.start_date, CAST(sh.LastSettlementDate AS DATE)) AS DATE) >= CAST('${startDateStr}' AS DATE) AND CAST(ISNULL(sh.start_date, CAST(sh.LastSettlementDate AS DATE)) AS DATE) <= CAST('${endDateStr}' AS DATE)`;
   const cctWhere = `CAST(cct.CreatedDate AS DATE) >= CAST('${startDateStr}' AS DATE) AND CAST(cct.CreatedDate AS DATE) <= CAST('${endDateStr}' AS DATE)`;
 
   const salesQuery = `
@@ -48,7 +48,12 @@ async function fetchFullReportData(startDateStr, endDateStr, pool) {
       sh.CashierId, 
       sh.BillNo, 
       sh.SER_NAME,
-      sts.PayMode as RawPayMode,
+      COALESCE(sts.PayMode, (
+        SELECT TOP 1 pm2.PayMode 
+        FROM PaymentDetailCur pd2 
+        JOIN Paymode pm2 ON pd2.Paymode = pm2.Position 
+        WHERE pd2.RestaurantBillId = sh.SettlementID
+      )) as RawPayMode,
       ISNULL(sts.SysAmount, sh.SysAmount) as SysAmount,
       sh.SubTotal as SubTotal,
       ISNULL(sh.DiscountAmount, 0) as DiscountAmount,
