@@ -2383,7 +2383,7 @@ export default function SalesReport() {
           "#a855f7",
         )}
         {renderMetricTile(
-          "Discount Savings",
+          "Total Discount",
           formatCurrency(filteredMetrics.TotalDiscount),
           "pricetag-outline",
           "#f43f5e",
