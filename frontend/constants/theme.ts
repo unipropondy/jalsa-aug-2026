@@ -50,13 +50,12 @@ export const Palette = {
 };
 
 export const Theme = {
-  // ── Primary Brand — Electric Violet / Purple ──────────────────────────────
-  primary:       Palette.violet300,   // #A855F7  glowing violet
-  primaryDark:   Palette.violet500,   // #7C3AED  deep button fill
-  primaryDeep:   Palette.violet800,   // #4B1C71  jewel shadow
+  primary:       '#9000F0',           // Bright Neon/Electric Purple
+  primaryDark:   '#7A00CC',           // Richer dark purple fill
+  primaryDeep:   '#5E0099',           // Jewel shadow purple
   primaryLight:  Palette.dark600,     // #221F4A  pressed/light tint on dark bg
-  primaryBorder: 'rgba(168,85,247,0.40)',
-  primaryGlow:   'rgba(168,85,247,0.20)',  // ambient glow behind buttons
+  primaryBorder: 'rgba(144,0,240,0.40)',
+  primaryGlow:   'rgba(144,0,240,0.20)',  // ambient glow behind buttons
 
   // ── DARK combo — main app surfaces ───────────────────────────────────────
   bgMain:    Palette.dark900,   // #0C0A22  page background
@@ -151,22 +150,21 @@ export const Theme = {
     elevation: Platform.OS === 'android' ? 6 : 6,
   },
 
-  // ── Semantic Status Colors (neon dark-mode) ───────────────────────────────
   success:       '#10B981',
-  successBg:     'rgba(16,185,129,0.12)',
-  successBorder: 'rgba(16,185,129,0.35)',
+  successBg:     '#132E22',
+  successBorder: '#183D2F',
 
   warning:       '#F59E0B',
-  warningBg:     'rgba(245,158,11,0.12)',
-  warningBorder: 'rgba(245,158,11,0.35)',
+  warningBg:     '#2E2215',
+  warningBorder: '#3E2F1E',
 
   danger:        '#EF4444',
-  dangerBg:      'rgba(239,68,68,0.12)',
-  dangerBorder:  'rgba(239,68,68,0.35)',
+  dangerBg:      '#2D1620',
+  dangerBorder:  '#3D1F2D',
 
   info:          '#3B82F6',
-  infoBg:        'rgba(59,130,246,0.12)',
-  infoBorder:    'rgba(59,130,246,0.35)',
+  infoBg:        '#152238',
+  infoBorder:    '#1D304F',
 
   // ── Table / Zone status ───────────────────────────────────────────────────
   tableLocked:      { bg: 'rgba(239,68,68,0.15)',    border: '#EF4444' },

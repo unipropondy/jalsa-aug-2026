@@ -729,6 +729,7 @@ export default function Category() {
   const insets = useSafeAreaInsets();
   const isTablet = Math.min(width, height) >= 500;
   const isLandscape = width > height;
+  const isTabletOrDesktopWeb = isTablet || (Platform.OS === "web" && width >= 768);
 
   const { itemSize, numberFont, smallFont, columns, GAP, PADDING } =
     useMemo(() => {
@@ -1679,8 +1680,8 @@ export default function Category() {
       <StatusBar barStyle="dark-content" backgroundColor={Theme.bgNav} />
 
       {/* 〰〰〰〰〰〰〰〰〰〰〰 TOP NAV BAR 〰〰〰〰〰〰〰〰〰〰〰 */}
-      {!isTablet ? (
-        // --- MOBILE HEADER (TWO ROWS) ---
+      {(!isTablet || !isLandscape) ? (
+        // --- MOBILE/PORTRAIT HEADER (TWO ROWS) ---
         <View
           style={{
             backgroundColor: Theme.bgNav,
@@ -1728,40 +1729,50 @@ export default function Category() {
                       style={[
                         styles.tabBtn,
                         isActive && styles.activeTabBtn,
-                        { paddingVertical: 6, paddingHorizontal: 12 },
+                        {
+                          paddingVertical: isTablet ? 9 : 6,
+                          paddingHorizontal: isTablet ? 16 : 12,
+                        },
                       ]}
                     >
                       <Ionicons
                         name={SECTION_ICONS[section] as any}
-                        size={12}
+                        size={isTablet ? 15 : 12}
                         color={isActive ? "#fff" : Theme.textSecondary}
-                        style={{ marginRight: 4 }}
+                        style={{ marginRight: isTablet ? 6 : 4 }}
                       />
                       <Text
                         style={[
                           styles.tabText,
                           isActive && styles.activeTabText,
-                          { fontSize: 12 },
+                          { fontSize: isTablet ? 15 : 12 },
                         ]}
                       >
-                        {formatSectionGlobal(SECTION_LABELS[section]).replace(
-                          "Section ",
-                          "Sec-",
-                        )}
+                        {isTablet
+                          ? formatSectionGlobal(SECTION_LABELS[section])
+                          : formatSectionGlobal(SECTION_LABELS[section]).replace(
+                              "Section ",
+                              "Sec-",
+                            )}
                       </Text>
                       {occupied > 0 && (
                         <View
                           style={[
                             styles.tabBadge,
                             isActive && styles.activeTabBadge,
-                            { marginLeft: 4, height: 16, minWidth: 16 },
+                            {
+                              marginLeft: isTablet ? 6 : 4,
+                              height: isTablet ? 20 : 16,
+                              minWidth: isTablet ? 20 : 16,
+                              borderRadius: isTablet ? 10 : 8,
+                            },
                           ]}
                         >
                           <Text
                             style={[
                               styles.tabBadgeText,
                               isActive && styles.activeTabBadgeText,
-                              { fontSize: 9 },
+                              { fontSize: isTablet ? 11 : 9 },
                             ]}
                           >
                             {occupied}
@@ -3990,17 +4001,23 @@ export default function Category() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* License Info Card (Bottom-Left Corner) */}
       <View
         style={[
           styles.licenseCardContainer,
           {
             bottom: Math.max(insets.bottom, 12) + 12,
             left: Math.max(insets.left, 12) + 12,
+            maxWidth: isTabletOrDesktopWeb ? 360 : 236,
+            padding: isTabletOrDesktopWeb ? 12 : 10,
           },
         ]}
       >
-        <View style={styles.licenseLogoContainer}>
+        <View
+          style={[
+            styles.licenseLogoContainer,
+            isTabletOrDesktopWeb && { width: 64, height: 64, borderRadius: 12 },
+          ]}
+        >
           {licenseInfo?.CompanyLogoUrl ? (
             <Image
               source={{ uri: licenseInfo.CompanyLogoUrl }}
@@ -4008,15 +4025,31 @@ export default function Category() {
               resizeMode="cover"
             />
           ) : (
-            <Ionicons name="restaurant-outline" size={18} color={Theme.primary} />
+            <Ionicons
+              name="restaurant-outline"
+              size={isTabletOrDesktopWeb ? 28 : 22}
+              color={Theme.primary}
+            />
           )}
         </View>
 
         <View style={styles.licenseTextContainer}>
-          <Text style={styles.licenseCompanyName} numberOfLines={1}>
+          <Text
+            style={[
+              styles.licenseCompanyName,
+              isTabletOrDesktopWeb && { fontSize: 14 },
+            ]}
+            numberOfLines={1}
+          >
             {licenseInfo?.CompanyName || "Smart POS"}
           </Text>
-          <Text style={styles.licenseAddress} numberOfLines={1}>
+          <Text
+            style={[
+              styles.licenseAddress,
+              isTabletOrDesktopWeb && { fontSize: 10, lineHeight: 14 },
+            ]}
+            numberOfLines={1}
+          >
             {licenseInfo?.Address || "Shop Address"}
           </Text>
           {licenseInfo && (() => {
@@ -4035,8 +4068,19 @@ export default function Category() {
             if (isExpired) {
               return (
                 <View style={styles.licenseRow}>
-                  <Ionicons name="alert-circle-outline" size={12} color="#EF4444" style={{ marginRight: 3 }} />
-                  <Text style={[styles.licenseDateText, { color: "#EF4444", fontWeight: "bold" }]}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={isTabletOrDesktopWeb ? 14 : 12}
+                    color="#EF4444"
+                    style={{ marginRight: 3 }}
+                  />
+                  <Text
+                    style={[
+                      styles.licenseDateText,
+                      { color: "#EF4444", fontWeight: "bold" },
+                      isTabletOrDesktopWeb && { fontSize: 10 },
+                    ]}
+                  >
                     License Expired
                   </Text>
                 </View>
@@ -4045,14 +4089,32 @@ export default function Category() {
 
             return (
               <View style={styles.licenseRow}>
-                <Ionicons name="checkmark-circle-outline" size={12} color="#22C55E" style={{ marginRight: 3 }} />
-                <Text style={styles.licenseDateText}>
-                  License: <Text style={styles.licenseDatesHighlighted}>{fromDateStr || ""} to {toDateStr || ""}</Text>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={isTabletOrDesktopWeb ? 14 : 12}
+                  color="#22C55E"
+                  style={{ marginRight: 3 }}
+                />
+                <Text
+                  style={[
+                    styles.licenseDateText,
+                    isTabletOrDesktopWeb && { fontSize: 10 },
+                  ]}
+                >
+                  License:{" "}
+                  <Text style={styles.licenseDatesHighlighted}>
+                    {fromDateStr || ""} to {toDateStr || ""}
+                  </Text>
                 </Text>
               </View>
             );
           })()}
-          <Text style={styles.licenseCopyright}>
+          <Text
+            style={[
+              styles.licenseCopyright,
+              isTabletOrDesktopWeb && { fontSize: 9 },
+            ]}
+          >
             @ 2026 UNIPRO . All rights reserved.
           </Text>
         </View>
@@ -4494,7 +4556,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    maxWidth: 240,                              // Compact on mobile so AI button is never covered
+    maxWidth: 236,                              // Set default to 236 on phone portrait
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
@@ -4503,8 +4565,8 @@ const styles = StyleSheet.create({
     zIndex: 100,                                // Below AI button (zIndex 9999)
   },
   licenseLogoContainer: {
-    width: 40,
-    height: 40,
+    width: 46,
+    height: 46,
     borderRadius: 10,
     backgroundColor: "#18163A",
     borderWidth: 1,

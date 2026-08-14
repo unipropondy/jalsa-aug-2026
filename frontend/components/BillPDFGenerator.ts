@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { API_URL } from '@/constants/Config';
 import { formatToSingaporeDate, formatToSingaporeTime, parseDatabaseDate } from '../utils/timezoneHelper';
 import { useGeneralSettingsStore } from '../stores/generalSettingsStore';
+import { useCartStore } from '../stores/cartStore';
 
 interface CompanySettings {
   name: string;
@@ -303,7 +304,7 @@ private static escapeHtml(str: string): string {
     let totalVipDiscount = parseFloat(String(saleData.vipDiscountAmount || 0)) || 0;
     (saleData.items || []).forEach((item: any) => {
       if (item.status === 'VOIDED') return;
-      const qtyNum = parseInt(String(item.qty || item.quantity || 1)) || 1;
+      const qtyNum = parseFloat(String(item.qty || item.quantity || 1)) || 1;
       const isCombo = item.isCombo === true || String(item.isCombo) === "1" || item.isCombo === 1;
       const discountBasis = isCombo ? (item.basePrice ?? item.price ?? 0) : (item.price ?? 0);
       const baseTotal = (item.price || 0) * qtyNum;
@@ -336,6 +337,20 @@ private static escapeHtml(str: string): string {
          finalDiscountInfo.amount = orderDiscount;
       }
     }
+    
+    // Pro-rate order discount if it is a split bill chit
+    if (saleData.isSplitChit && orderDiscount > 0) {
+      const originalCart = useCartStore.getState().carts[useCartStore.getState().currentContextId!] || [];
+      const originalSubtotal = originalCart.reduce((sum: number, item: any) => {
+        if (item.status === "VOIDED") return sum;
+        return sum + (item.price || 0) * item.qty;
+      }, 0);
+      
+      if (originalSubtotal > 0 && Math.abs(originalSubtotal - grossTotal) > 0.05) {
+        const ratio = grossTotal / originalSubtotal;
+        orderDiscount = orderDiscount * ratio;
+      }
+    }
     if (totalVipDiscount > 0) {
       orderDiscount = Math.max(0, orderDiscount - totalVipDiscount);
     }
@@ -360,7 +375,7 @@ private static escapeHtml(str: string): string {
       let scEligibleSubtotal = 0;
       (saleData.items || []).forEach((item: any) => {
         if (item.status === 'VOIDED') return;
-        const qtyNum = parseInt(String(item.qty || item.quantity || 1)) || 1;
+        const qtyNum = parseFloat(String(item.qty || item.quantity || 1)) || 1;
         const isCombo = item.isCombo === true || String(item.isCombo) === "1" || item.isCombo === 1;
         const discountBasis = isCombo ? (item.basePrice ?? item.price ?? 0) : (item.price ?? 0);
         const baseTotal = (item.price || 0) * qtyNum;
@@ -393,17 +408,32 @@ private static escapeHtml(str: string): string {
       serviceChargeAmount = scEligibleNet * (scPercentage / 100);
     }
 
+    const savedTakeawayCharge = saleData.takeawayCharge != null ? parseFloat(String(saleData.takeawayCharge)) : null;
     const takeawayRate = parseFloat(String((company as any).TakeawayCharges ?? company.takeawayCharges ?? 0)) || 0;
-    const takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
-      const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
-      const isVoided = item.status === 'VOIDED' || item.StatusCode === 0;
-      if (isTW && !isVoided) {
-        return sum + (item.qty || item.Qty || item.quantity || 1);
-      }
-      return sum;
-    }, 0);
+    let takeawayQty = 0;
+    let takeawayCharge = 0;
+    if (savedTakeawayCharge !== null) {
+      takeawayCharge = savedTakeawayCharge;
+      takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
+        const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
+        const isVoided = item.status === 'VOIDED' || item.StatusCode === 0;
+        if (isTW && !isVoided) {
+          return sum + (item.qty || item.Qty || item.quantity || 1);
+        }
+        return sum;
+      }, 0);
+    } else {
+      takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
+        const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
+        const isVoided = item.status === 'VOIDED' || item.StatusCode === 0;
+        if (isTW && !isVoided) {
+          return sum + (item.qty || item.Qty || item.quantity || 1);
+        }
+        return sum;
+      }, 0);
+      takeawayCharge = takeawayQty * takeawayRate;
+    }
 
-    const takeawayCharge = takeawayQty * takeawayRate;
     const taxableAmount = currentSubtotal + serviceChargeAmount + takeawayCharge;
     const hasSC = serviceChargeAmount > 0;
     const effectiveSCPercentage = serviceChargeAmount > 0 && currentSubtotal > 0
@@ -439,7 +469,8 @@ private static escapeHtml(str: string): string {
     const itemsHTML = (saleData.items || [])
         .filter((item: any) => item.status !== 'VOIDED')
         .map((item: any) => {
-          const qtyNum = item.qty || item.quantity || 1;
+          const qtyNum = parseFloat(String(item.qty || item.quantity || 1)) || 1;
+          const qtyStr = Number.isInteger(qtyNum) ? String(qtyNum) : qtyNum.toFixed(1);
           const modifiersHTML = (item.modifiers && Array.isArray(item.modifiers))
             ? item.modifiers.map((m: any) => {
                 const mName = (m.ModifierName || m.name || "").trim();
@@ -482,9 +513,9 @@ private static escapeHtml(str: string): string {
                       return outStr;
                     })()}
                 </td>
-                <td class="item-qty">${item.qty || item.quantity}</td>
+                <td class="item-qty">${qtyStr}</td>
                 <td class="item-price">${currencySymbol}${item.price.toFixed(2)}</td>
-                <td class="item-total">${currencySymbol}${(item.price * (item.qty || item.quantity)).toFixed(2)}</td>
+                <td class="item-total">${currencySymbol}${(item.price * qtyNum).toFixed(2)}</td>
             </tr>
           `;
         }).join('');

@@ -12,6 +12,7 @@ import { PrinterDetector } from "./PrinterDetector";
 import SunmiPrinterService from "./SunmiPrinterService";
 import { useCompanySettingsStore } from "../stores/companySettingsStore";
 import { useGeneralSettingsStore } from "../stores/generalSettingsStore";
+import { useCartStore } from "../stores/cartStore";
 
 // Printer types
 export type PrinterType =
@@ -1638,8 +1639,9 @@ class UniversalPrinter {
         .substring(0, 26)
         .padEnd(26);
       const qtyNum =
-        parseInt(String(item.qty || item.quantity || item.Quantity || 1)) || 1;
-      const qty = `[${qtyNum}]`.padStart(5);
+        parseFloat(String(item.qty || item.quantity || item.Quantity || 1)) || 1;
+      const qtyStr = Number.isInteger(qtyNum) ? String(qtyNum) : qtyNum.toFixed(1);
+      const qty = `[${qtyStr}]`.padStart(5);
 
       const priceNum =
         parseFloat(String(item.price || item.Price || item.Cost || 0)) || 0;
@@ -1706,7 +1708,7 @@ class UniversalPrinter {
     let totalVipDiscount = parseFloat(String(saleData.vipDiscountAmount || 0)) || 0;
     (saleData.items || []).forEach((item: any) => {
       if (item.status === "VOIDED") return;
-      const qtyNum = parseInt(String(item.qty || item.quantity || 1)) || 1;
+      const qtyNum = parseFloat(String(item.qty || item.quantity || 1)) || 1;
       const isCombo = item.isCombo === true || String(item.isCombo) === "1" || item.isCombo === 1;
       const discountBasis = isCombo ? (item.basePrice ?? item.price ?? 0) : (item.price ?? 0);
       const baseTotal = (item.price || 0) * qtyNum;
@@ -1757,6 +1759,20 @@ class UniversalPrinter {
          finalDiscountInfo.amount = orderDiscount;
       }
     }
+    
+    // Pro-rate order discount if it is a split bill chit
+    if (saleData.isSplitChit && orderDiscount > 0) {
+      const originalCart = useCartStore.getState().carts[useCartStore.getState().currentContextId!] || [];
+      const originalSubtotal = originalCart.reduce((sum: number, item: any) => {
+        if (item.status === "VOIDED") return sum;
+        return sum + (item.price || 0) * item.qty;
+      }, 0);
+      
+      if (originalSubtotal > 0 && Math.abs(originalSubtotal - grossTotal) > 0.05) {
+        const ratio = grossTotal / originalSubtotal;
+        orderDiscount = orderDiscount * ratio;
+      }
+    }
     const hasAnyDiscount = totalItemDiscount > 0 || orderDiscount > 0 || totalVipDiscount > 0;
     let currentSubtotal = grossTotal;
 
@@ -1801,7 +1817,7 @@ class UniversalPrinter {
       let scEligibleSubtotal = 0;
       (saleData.items || []).forEach((item: any) => {
         if (item.status === "VOIDED") return;
-        const qtyNum = parseInt(String(item.qty || item.quantity || 1)) || 1;
+        const qtyNum = parseFloat(String(item.qty || item.quantity || 1)) || 1;
         const isCombo = item.isCombo === true || String(item.isCombo) === "1" || item.isCombo === 1;
         const discountBasis = isCombo ? (item.basePrice ?? item.price ?? 0) : (item.price ?? 0);
         const baseTotal = (item.price || 0) * qtyNum;
@@ -1838,18 +1854,32 @@ class UniversalPrinter {
       ? Math.round((serviceChargeAmount / currentSubtotal) * 100)
       : scPercentage;
 
+    const savedTakeawayCharge = saleData.takeawayCharge != null ? parseFloat(String(saleData.takeawayCharge)) : null;
     const companySettings = useCompanySettingsStore.getState().settings;
     const takeawayRate = companySettings?.takeawayCharges || 0;
-    const takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
-      const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
-      const isVoided = item.status === "VOIDED" || item.StatusCode === 0;
-      if (isTW && !isVoided) {
-        return sum + (item.qty || item.quantity || 1);
-      }
-      return sum;
-    }, 0);
-
-    const takeawayCharge = takeawayQty * takeawayRate;
+    let takeawayQty = 0;
+    let takeawayCharge = 0;
+    if (savedTakeawayCharge !== null) {
+      takeawayCharge = savedTakeawayCharge;
+      takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
+        const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
+        const isVoided = item.status === "VOIDED" || item.StatusCode === 0;
+        if (isTW && !isVoided) {
+          return sum + (item.qty || item.quantity || 1);
+        }
+        return sum;
+      }, 0);
+    } else {
+      takeawayQty = (saleData.items || []).reduce((sum: number, item: any) => {
+        const isTW = item.isTakeaway || item.IsTakeaway || item.isTakeAway || item.IsTakeAway;
+        const isVoided = item.status === "VOIDED" || item.StatusCode === 0;
+        if (isTW && !isVoided) {
+          return sum + (item.qty || item.quantity || 1);
+        }
+        return sum;
+      }, 0);
+      takeawayCharge = takeawayQty * takeawayRate;
+    }
     const taxableAmount = currentSubtotal + serviceChargeAmount + takeawayCharge;
     const gstAmountRaw = hasGST ? taxableAmount * (gstRate / 100) : 0;
     const gstAmount = Math.round(gstAmountRaw * 100) / 100;
