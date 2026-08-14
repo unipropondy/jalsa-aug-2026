@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -25,6 +26,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getSingaporeTimeTodayRange, formatToSingaporeDateTime } from "../../utils/timezoneHelper";
 
@@ -514,8 +516,13 @@ export default function SettlementScreen() {
     Reason: '',
     Remarks: '',
     PaymentMode: 'Cash',
-    ReferenceNo: ''
+    ReferenceNo: '',
+    AttachmentUrl: ''
   });
+
+  const [uploading, setUploading] = useState(false);
+  const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
+  const [showAllMediaModal, setShowAllMediaModal] = useState(false);
 
   // Cash In State
   const [cashInEntries, setCashInEntries] = useState<any[]>([]);
@@ -526,7 +533,8 @@ export default function SettlementScreen() {
     Reason: '',
     Remarks: '',
     PaymentMode: 'Cash',
-    ReferenceNo: ''
+    ReferenceNo: '',
+    AttachmentUrl: ''
   });
 
   // Cash Box State
@@ -775,11 +783,7 @@ const fetchDayHistory = async () => {
     return val.toFixed(2);
   };
 
-  const netSales =
-    (parseFloat(totalSales.SubTotal) || 0) +
-    (parseFloat(totalSales.ServiceCharge) || 0) +
-    (parseFloat(totalSales.TotalTax) || 0) -
-    (parseFloat(totalSales.DiscountAmount) || 0);
+  const netSales = parseFloat(totalSales.NetTotal) || 0;
 
   const salesTotal = sales.reduce((sum, s) => sum + (parseFloat(s.Amount) || 0), 0);
   const paymentsTotal = payments.reduce((sum, p) => sum + (parseFloat(p.Amount) || 0), 0);
@@ -797,12 +801,22 @@ const fetchDayHistory = async () => {
   }, 0);
 
   const transactionsTotal = baseTransactionsTotal + displayOpeningAmount - totalCashOut + totalCashInEntries;
-  const salesCash = payments
+
+  const normalCashSales = payments
     .filter(p => {
       const name = p.PaymodeName?.toUpperCase();
-      return name === 'CASH' || name === 'CASH BOX ENTRY' || name === 'CASHBOX' || name === 'CASH BOX';
+      return name === 'CASH' || name === 'CASHBOX' || name === 'CASH BOX';
     })
     .reduce((sum, p) => sum + (parseFloat(p.Amount) || 0), 0);
+
+  const cashBoxEntrySales = payments
+    .filter(p => {
+      const name = p.PaymodeName?.toUpperCase();
+      return name === 'CASH BOX ENTRY';
+    })
+    .reduce((sum, p) => sum + (parseFloat(p.Amount) || 0), 0);
+
+  const salesCash = normalCashSales + cashBoxEntrySales;
 
   const dbHasCashSalesInCashIn = cashInEntries.some(entry => entry.Reason === 'Cash Sale' || entry.Reason === 'Cash Box Entry');
 
@@ -819,9 +833,16 @@ const fetchDayHistory = async () => {
 
   const displayCashOutCard = totalCashOut + cashOutTransactionsSum;
 
-  const totalCashIn = paymentsTotal + displayOpeningAmount + displayManualCashIn + cashInTransactionsSum;
+  const totalCashIn = salesCash + displayOpeningAmount + displayManualCashIn + cashInTransactionsSum;
 
   const totalCashOutSum = totalCashOut + cashOutTransactionsSum;
+
+  const nonCashTotal = payments
+    .filter(p => {
+      const name = p.PaymodeName?.toUpperCase() || "";
+      return name !== 'CASH' && name !== 'CASH BOX ENTRY' && name !== 'CASHBOX' && name !== 'CASH BOX';
+    })
+    .reduce((sum, p) => sum + (parseFloat(p.Amount) || 0), 0);
 
   const sysCash = dbHasCashSalesInCashIn
     ? displayOpeningAmount + totalCashInEntries - totalCashOut + baseTransactionsTotal
@@ -931,7 +952,8 @@ const fetchDayHistory = async () => {
         paymentMode: cashOutForm.PaymentMode,
         referenceNo: cashOutForm.ReferenceNo,
         terminalCode: selectedTerminal === "ALL" ? "" : selectedTerminal,
-        date: getLocalDateStr(selectedDate)
+        date: getLocalDateStr(selectedDate),
+        attachmentUrl: cashOutForm.AttachmentUrl || null
       };
 
       let res;
@@ -946,7 +968,7 @@ const fetchDayHistory = async () => {
       }
 
       if (res.data.success) {
-        setCashOutForm({ CashOutId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '' });
+        setCashOutForm({ CashOutId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '', AttachmentUrl: '' });
         setShowCashOutModal(false);
         fetchData();
         Alert.alert("Success", "Cash Out entry saved");
@@ -956,6 +978,86 @@ const fetchDayHistory = async () => {
       Alert.alert("Error", err.response?.data?.error || "Failed to save cash out entry");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectImage = async (mode: 'camera' | 'library') => {
+    try {
+      let permissionResult;
+      if (mode === 'camera') {
+        permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      } else {
+        permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      }
+
+      if (!permissionResult.granted) {
+        Alert.alert("Permission Denied", `We need access to your ${mode === 'camera' ? 'camera' : 'photo library'} to upload receipts.`);
+        return;
+      }
+
+      const pickerResult = mode === 'camera'
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.3,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.3,
+          });
+
+      if (pickerResult.canceled || !pickerResult.assets || pickerResult.assets.length === 0) {
+        return;
+      }
+
+      const fileUri = pickerResult.assets[0].uri;
+      await handleUploadImage(fileUri);
+    } catch (err) {
+      console.error("❌ SELECT IMAGE ERROR", err);
+      Alert.alert("Error", "Failed to select image");
+    }
+  };
+
+  const handleUploadImage = async (fileUri: string) => {
+    try {
+      setUploading(true);
+      const formData = new FormData();
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        formData.append('image', blob, 'receipt.png');
+      } else {
+        const filename = fileUri.split('/').pop() || 'receipt.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+        formData.append('image', {
+          uri: fileUri,
+          name: filename,
+          type,
+        } as any);
+      }
+
+      const response = await API.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+      });
+
+      if (response.data && response.data.success) {
+        setCashOutForm(prev => ({ ...prev, AttachmentUrl: response.data.imageUrl }));
+        Alert.alert("Success", "Receipt uploaded successfully!");
+      } else {
+        Alert.alert("Upload Failed", "Could not upload image to server.");
+      }
+    } catch (err: any) {
+      console.error("❌ UPLOAD IMAGE ERROR", err);
+      Alert.alert("Error", "Failed to upload image");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -974,7 +1076,8 @@ const fetchDayHistory = async () => {
         paymentMode: cashInForm.PaymentMode,
         referenceNo: cashInForm.ReferenceNo,
         terminalCode: selectedTerminal === "ALL" ? "" : selectedTerminal,
-        date: getLocalDateStr(selectedDate)
+        date: getLocalDateStr(selectedDate),
+        attachmentUrl: cashInForm.AttachmentUrl || null
       };
 
       let res;
@@ -989,7 +1092,7 @@ const fetchDayHistory = async () => {
       }
 
       if (res.data.success) {
-        setCashInForm({ CashInId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '' });
+        setCashInForm({ CashInId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '', AttachmentUrl: '' });
         setShowCashInModal(false);
         fetchData();
         Alert.alert("Success", "Cash In entry saved");
@@ -1267,6 +1370,10 @@ const fetchDayHistory = async () => {
                   <td class="right">${formatCurrency(totalSales.Tips)}</td>
                 </tr>
                 <tr>
+                  <td>Round Off</td>
+                  <td class="right">${formatCurrency(totalSales.RoundedBy)}</td>
+                </tr>
+                <tr>
                   <td colspan="2"><div class="line-divider"></div></td>
                 </tr>
                 <tr class="bold">
@@ -1304,7 +1411,11 @@ const fetchDayHistory = async () => {
                 </tr>
                 <tr>
                   <td>Cash Sales</td>
-                  <td class="right">${formatCurrency(salesCash)}</td>
+                  <td class="right">${formatCurrency(normalCashSales)}</td>
+                </tr>
+                <tr>
+                  <td>Cash Box Entry</td>
+                  <td class="right">${formatCurrency(cashBoxEntrySales)}</td>
                 </tr>
                 <tr>
                   <td>Cash In</td>
@@ -1321,6 +1432,18 @@ const fetchDayHistory = async () => {
                   <td>EXPECTED CASH</td>
                   <td class="right">${formatCurrency(totalCashIn - totalCashOutSum)}</td>
                 </tr>
+                ${totalClosing > 0 ? `
+                <tr>
+                  <td colspan="2"><div class="line-divider"></div></td>
+                </tr>
+                <tr class="bold">
+                  <td>CLOSING AMOUNT</td>
+                  <td class="right">${formatCurrency(totalClosing)}</td>
+                </tr>
+                <tr>
+                  <td>Variance</td>
+                  <td class="right" style="color: ${totalClosing >= (totalCashIn - totalCashOutSum) ? '#2e7d32' : '#c62828'}">${totalClosing >= (totalCashIn - totalCashOutSum) ? '+' : ''}${formatCurrency(totalClosing - (totalCashIn - totalCashOutSum))}</td>
+                </tr>` : ''}
               </table>
 
               <div class="divider">========================================</div>
@@ -1359,6 +1482,7 @@ const fetchDayHistory = async () => {
       text += formatTwoCols48("Service Charge:", formatCurrency(totalSales.ServiceCharge));
       text += formatTwoCols48("GST Collected:", formatCurrency(totalSales.TotalTax));
       text += formatTwoCols48("Tips:", formatCurrency(totalSales.Tips));
+      text += formatTwoCols48("Round Off:", formatCurrency(totalSales.RoundedBy));
       text += "[L]----------------------------------------\n";
       text += formatTwoCols48("<B>NET SALES:</B>", "<B>" + formatCurrency(netSales) + "</B>\n");
 
@@ -1375,11 +1499,17 @@ const fetchDayHistory = async () => {
       text += "[C]<B>CASH DRAWER SUMMARY</B>\n";
       text += "[C]========================================\n";
       text += formatTwoCols48("Opening Float:", formatCurrency(displayOpeningAmount));
-      text += formatTwoCols48("Cash Sales:", formatCurrency(salesCash));
+      text += formatTwoCols48("Cash Sales:", formatCurrency(normalCashSales));
+      text += formatTwoCols48("Cash Box Entry:", formatCurrency(cashBoxEntrySales));
       text += formatTwoCols48("Cash In:", formatCurrency(cashInTotalSum));
       text += formatTwoCols48("Cash Out:", formatCurrency(totalCashOutSum));
       text += "[L]----------------------------------------\n";
       text += formatTwoCols48("<font size='big'><B>EXPECTED CASH:</B></font>", "<font size='big'><B>" + formatCurrency(totalCashIn - totalCashOutSum) + "</B></font>\n");
+      if (totalClosing > 0) {
+        text += formatTwoCols48("<B>CLOSING AMOUNT:</B>", "<B>" + formatCurrency(totalClosing) + "</B>\n");
+        const variance = totalClosing - (totalCashIn - totalCashOutSum);
+        text += formatTwoCols48("Variance:", (variance >= 0 ? '+' : '') + formatCurrency(variance) + "\n");
+      }
       text += "[C]========================================\n";
       text += "[C]SMART-POS BY UNIPROSG\n";
       text += "[C]========================================\n\n\n\n";
@@ -1402,8 +1532,33 @@ const fetchDayHistory = async () => {
           });
           const resData = await response.json();
           if (resData.success && resData.jobId) {
-            printedToHardware = true;
-            console.log(`✅ [Web Settlement] Settlement report print queued successfully via bridge: ${resData.jobId}`);
+            console.log(`📡 [Web Settlement] print queued: ${resData.jobId}. Polling status...`);
+            const jobId = resData.jobId;
+            const start = Date.now();
+            let isCompleted = false;
+            while (Date.now() - start < 8000) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              try {
+                const statusRes = await fetch(`${API_URL}/api/print-jobs/status/${jobId}`);
+                const statusData = await statusRes.json();
+                if (statusData.success && statusData.status === 'COMPLETED') {
+                  isCompleted = true;
+                  break;
+                }
+                if (statusData.success && statusData.status === 'FAILED') {
+                  console.warn(`❌ [Web Settlement] Job failed on bridge side:`, statusData.error);
+                  break;
+                }
+              } catch (err) {
+                console.error("[Web Settlement] Status poll error:", err);
+              }
+            }
+            if (isCompleted) {
+              printedToHardware = true;
+              console.log(`✅ [Web Settlement] Settlement report printed successfully via bridge`);
+            } else {
+              console.warn(`⚠️ [Web Settlement] Print job ${jobId} failed or timed out. Falling back to print preview.`);
+            }
           }
         } catch (e) {
           console.error("❌ [Web Settlement] Bridge print failed:", e);
@@ -1480,7 +1635,8 @@ const fetchDayHistory = async () => {
             await SunmiModule.printText("      CASH DRAWER SUMMARY\n");
             await SunmiModule.printText("================================\n");
             await SunmiModule.printText(formatTwoCols32("Opening Float:", formatCurrency(displayOpeningAmount)));
-            await SunmiModule.printText(formatTwoCols32("Cash Sales:", formatCurrency(salesCash)));
+            await SunmiModule.printText(formatTwoCols32("Cash Sales:", formatCurrency(normalCashSales)));
+            await SunmiModule.printText(formatTwoCols32("Cash Box Entry:", formatCurrency(cashBoxEntrySales)));
             await SunmiModule.printText(formatTwoCols32("Cash In:", formatCurrency(cashInTotalSum)));
             await SunmiModule.printText(formatTwoCols32("Cash Out:", formatCurrency(totalCashOutSum)));
             await SunmiModule.printText("--------------------------------\n");
@@ -1713,7 +1869,7 @@ const fetchDayHistory = async () => {
             <Text style={styles.loadingText}>Fetching Settlement...</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {/* Day Start & End Timestamps */}
             {dayLog && (
               <View style={{
@@ -1896,15 +2052,34 @@ const fetchDayHistory = async () => {
 
               {/* === SALES === */}
               <View style={[styles.card, isTablet && styles.cardTablet]}>
-                <View style={styles.cardHeader}>
+                <View style={[styles.cardHeader, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                   <Text style={styles.cardHeaderTitle}>SALES</Text>
+                  {cashOutEntries.some(co => co.AttachmentUrl) && (
+                    <TouchableOpacity
+                      onPress={() => setShowAllMediaModal(true)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: Theme.success + '20',
+                        borderWidth: 1,
+                        borderColor: Theme.success + '60',
+                        borderRadius: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Ionicons name="images" size={13} color={Theme.success} />
+                      <Text style={{ fontFamily: Fonts.bold, fontSize: 11, color: Theme.success }}>Receipts</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { flex: 2 }]}>Paymode</Text>
-                  <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>Cash In</Text>
-                  <Text style={[styles.tableHeaderText, { flex: 1, textAlign: "right" }]}>Cash Out</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Cash In</Text>
+                  <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Cash Out</Text>
                 </View>
-                <ScrollView style={styles.cardBodyScroll} nestedScrollEnabled>
+                <View style={styles.cardBodyScroll}>
                   {displayOpeningAmount > 0 && (
                     <View style={styles.tableRow}>
                       <Text style={[styles.tableCellText, { flex: 2 }]}>Opening Balance</Text>
@@ -1926,13 +2101,34 @@ const fetchDayHistory = async () => {
                           Alert.alert("Locked", "Manual Cash In entry is disabled when Cash Drawer is ON.");
                           return;
                         }
-                        setCashInForm({ ...ci, CashInId: ci.CashInId || ci.cashInId, Amount: ci.Amount?.toString() || '' });
+                        setCashInForm({ ...ci, CashInId: ci.CashInId || ci.cashInId, Amount: ci.Amount?.toString() || '', AttachmentUrl: ci.AttachmentUrl || '' });
                         setShowCashInModal(true);
                       }}
                     >
                       <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.tableCellText}>{ci.Reason || 'Cash In'}</Text>
                         <Ionicons name="create-outline" size={14} color={Theme.textPrimary} style={{ marginLeft: 6 }} />
+                        {!!ci.AttachmentUrl && (
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setViewerImageUrl(ci.AttachmentUrl);
+                            }}
+                            style={{
+                              marginLeft: 8,
+                              width: 24,
+                              height: 24,
+                              borderRadius: 6,
+                              borderWidth: 1.5,
+                              borderColor: Theme.success,
+                              backgroundColor: Theme.success + "15",
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Ionicons name="image" size={12} color={Theme.success} />
+                          </TouchableOpacity>
+                        )}
                       </View>
                       <Text style={[styles.tableCellText, { flex: 1, textAlign: "right", color: Theme.success }]}>
                         +{formatCurrency(ci.Amount)}
@@ -1952,13 +2148,34 @@ const fetchDayHistory = async () => {
                           Alert.alert("Locked", "Manual Cash Out entry is disabled when Cash Drawer is ON.");
                           return;
                         }
-                        setCashOutForm({ ...co, CashOutId: co.CashOutId || co.cashOutId, Amount: co.Amount?.toString() || '' });
+                        setCashOutForm({ ...co, CashOutId: co.CashOutId || co.cashOutId, Amount: co.Amount?.toString() || '', AttachmentUrl: co.AttachmentUrl || '' });
                         setShowCashOutModal(true);
                       }}
                     >
                       <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.tableCellText}>{co.Reason || 'Cash Out'}</Text>
                         <Ionicons name="create-outline" size={14} color={Theme.textPrimary} style={{ marginLeft: 6 }} />
+                        {!!co.AttachmentUrl && (
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setViewerImageUrl(co.AttachmentUrl);
+                            }}
+                            style={{
+                              marginLeft: 8,
+                              width: 24,
+                              height: 24,
+                              borderRadius: 6,
+                              borderWidth: 1.5,
+                              borderColor: Theme.success,
+                              backgroundColor: Theme.success + "15",
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Ionicons name="image" size={12} color={Theme.success} />
+                          </TouchableOpacity>
+                        )}
                       </View>
                       <Text style={[styles.tableCellText, { flex: 1, textAlign: "right" }]}>
                         0.00
@@ -1993,23 +2210,50 @@ const fetchDayHistory = async () => {
                     );
                   })}
                   {payments.length === 0 && displayOpeningAmount === 0 && transactions.length === 0 && cashOutEntries.length === 0 && cashInEntries.length === 0 && <Text style={styles.emptyText}>No sales</Text>}
-                </ScrollView>
-                <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 12, backgroundColor: Theme.bgNav, borderTopWidth: 1, borderTopColor: Theme.border, alignItems: "center" }}>
+                </View>
+                {/* 1. Total (All Modes) */}
+                <View style={{ flexDirection: "row", paddingVertical: 10, paddingHorizontal: 12, backgroundColor: Theme.bgNav, borderTopWidth: 1, borderTopColor: Theme.border, alignItems: "center" }}>
                   <View style={{ flex: 2, alignItems: 'flex-end', paddingRight: 15 }}>
-                    <Text style={{ fontFamily: Fonts.black, fontSize: 14, color: Theme.primary }}>TOTAL</Text>
+                    <Text style={{ fontFamily: Fonts.black, fontSize: 13, color: Theme.primary }}>TOTAL (ALL MODES)</Text>
                   </View>
-                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 14, color: Theme.success }}>
-                    {formatCurrency(totalCashIn)}
+                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 13, color: Theme.success }}>
+                    {formatCurrency(totalCashIn + nonCashTotal)}
                   </Text>
-                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 14, color: Theme.danger }}>
+                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 13, color: Theme.danger }}>
                     {formatCurrency(totalCashOutSum)}
                   </Text>
                 </View>
-                <View style={{ flexDirection: "row", paddingVertical: 10, paddingHorizontal: 12, backgroundColor: Theme.bgNav, borderTopWidth: 1, borderTopColor: Theme.border, alignItems: "center" }}>
+
+                <View style={{ flexDirection: "row", paddingVertical: 8, paddingHorizontal: 12, backgroundColor: Theme.bgNav, borderBottomWidth: 1, borderBottomColor: Theme.border, alignItems: "center" }}>
                   <View style={{ flex: 2, alignItems: 'flex-end', paddingRight: 15 }}>
-                    <Text style={{ fontFamily: Fonts.black, fontSize: 13, color: Theme.textSecondary }}>NET AMOUNT</Text>
+                    <Text style={{ fontFamily: Fonts.black, fontSize: 12, color: Theme.textSecondary }}>NET (ALL MODES)</Text>
                   </View>
-                  <Text style={{ flex: 2, textAlign: "right", fontFamily: Fonts.black, fontSize: 14, color: (totalCashIn - totalCashOutSum) >= 0 ? Theme.success : Theme.danger }}>
+                  <Text style={{ flex: 2, textAlign: "right", fontFamily: Fonts.black, fontSize: 13, color: ((totalCashIn + nonCashTotal) - totalCashOutSum) >= 0 ? Theme.success : Theme.danger }}>
+                    {formatCurrency((totalCashIn + nonCashTotal) - totalCashOutSum)}
+                  </Text>
+                </View>
+
+                {/* Divider space */}
+                <View style={{ height: 4, backgroundColor: Theme.border }} />
+
+                {/* 2. Expected Cash (Cash Only) */}
+                <View style={{ flexDirection: "row", paddingVertical: 10, paddingHorizontal: 12, backgroundColor: Theme.bgNav, alignItems: "center" }}>
+                  <View style={{ flex: 2, alignItems: 'flex-end', paddingRight: 15 }}>
+                    <Text style={{ fontFamily: Fonts.black, fontSize: 13, color: Theme.textSecondary }}>EXPECTED CASH (CASH ONLY)</Text>
+                  </View>
+                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 13, color: Theme.success }}>
+                    {formatCurrency(totalCashIn)}
+                  </Text>
+                  <Text style={{ flex: 1, textAlign: "right", fontFamily: Fonts.black, fontSize: 13, color: Theme.danger }}>
+                    {formatCurrency(totalCashOutSum)}
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: "row", paddingVertical: 10, paddingHorizontal: 12, backgroundColor: Theme.primary + '15', borderTopWidth: 1.5, borderTopColor: Theme.primary, alignItems: "center" }}>
+                  <View style={{ flex: 2, alignItems: 'flex-end', paddingRight: 15 }}>
+                    <Text style={{ fontFamily: Fonts.black, fontSize: 14, color: Theme.textPrimary }}>EXPECTED DRAWER CASH</Text>
+                  </View>
+                  <Text style={{ flex: 2, textAlign: "right", fontFamily: Fonts.black, fontSize: 15, color: (totalCashIn - totalCashOutSum) >= 0 ? Theme.success : Theme.danger }}>
                     {formatCurrency(totalCashIn - totalCashOutSum)}
                   </Text>
                 </View>
@@ -2151,13 +2395,18 @@ const fetchDayHistory = async () => {
               <View style={{ marginBottom: 15 }}>
                 {/* <Text style={{ fontFamily: Fonts.bold, marginBottom: 8, color: Theme.textPrimary }}>Today's Entries</Text> */}
                 {cashOutEntries.length > 0 ? (
-                  <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                  <View>
                     {cashOutEntries.map((co, idx) => (
                       <View key={idx} style={[styles.tableRow, { alignItems: 'center' }]}>
                         <Text style={[styles.tableCellText, { flex: 2 }]}>{co.Reason || 'Cash Out'}</Text>
                         <Text style={[styles.tableCellText, { flex: 1, textAlign: 'right', paddingRight: 15 }]}>{formatCurrency(co.Amount)}</Text>
-                        <View style={{ flexDirection: 'row', gap: 15, width: 60, justifyContent: 'flex-end' }}>
-                          <TouchableOpacity onPress={() => setCashOutForm({ ...co, CashOutId: co.CashOutId || co.cashOutId, Amount: co.Amount?.toString() || '' })}>
+                        <View style={{ flexDirection: 'row', gap: 15, width: 90, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {!!co.AttachmentUrl && (
+                            <TouchableOpacity onPress={() => setViewerImageUrl(co.AttachmentUrl)}>
+                              <Ionicons name="eye-outline" size={18} color={Theme.success} />
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity onPress={() => setCashOutForm({ ...co, CashOutId: co.CashOutId || co.cashOutId, Amount: co.Amount?.toString() || '', AttachmentUrl: co.AttachmentUrl || '' })}>
                             <Ionicons name="create-outline" size={18} color={Theme.primary} />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => handleDeleteCashOut(co.CashOutId || co.cashOutId)}>
@@ -2166,7 +2415,7 @@ const fetchDayHistory = async () => {
                         </View>
                       </View>
                     ))}
-                  </ScrollView>
+                  </View>
                 ) : (
                   <View style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: '#FAFAFA', borderRadius: 8, borderWidth: 1, borderColor: Theme.border }}>
                     <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: Theme.textMuted }}>No cash out entries found for the selected time period.</Text>
@@ -2219,12 +2468,83 @@ const fetchDayHistory = async () => {
                   placeholder="Additional notes..."
                 />
               </View> */}
+              {/* Attachment Section */}
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ fontFamily: Fonts.bold, fontSize: 13, marginBottom: 8, color: Theme.textSecondary }}>Receipt Attachment</Text>
+                
+                {uploading ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 }}>
+                    <ActivityIndicator size="small" color={Theme.primary} />
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: Theme.textMuted }}>Uploading receipt...</Text>
+                  </View>
+                ) : cashOutForm.AttachmentUrl ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Theme.bgMuted, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: Theme.border }}>
+                    <Ionicons name="document-attach-outline" size={24} color={Theme.success} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: Fonts.bold, fontSize: 13, color: Theme.textPrimary }} numberOfLines={1}>
+                        {cashOutForm.AttachmentUrl.split('/').pop()}
+                      </Text>
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: Theme.textMuted }}>Compressed receipt photo</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity onPress={() => setViewerImageUrl(cashOutForm.AttachmentUrl)} style={{ padding: 4 }}>
+                        <Ionicons name="eye-outline" size={20} color={Theme.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setCashOutForm(prev => ({ ...prev, AttachmentUrl: '' }))} style={{ padding: 4 }}>
+                        <Ionicons name="trash-outline" size={20} color={Theme.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity 
+                      onPress={() => handleSelectImage('camera')}
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        backgroundColor: Theme.bgCard,
+                        borderWidth: 1.5,
+                        borderColor: Theme.primary + '30',
+                        borderStyle: 'dashed',
+                        paddingVertical: 12,
+                        borderRadius: 8
+                      }}
+                    >
+                      <Ionicons name="camera-outline" size={18} color={Theme.primary} />
+                      <Text style={{ fontFamily: Fonts.bold, fontSize: 13, color: Theme.primary }}>Take Photo</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={() => handleSelectImage('library')}
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        backgroundColor: Theme.bgCard,
+                        borderWidth: 1.5,
+                        borderColor: Theme.primary + '30',
+                        borderStyle: 'dashed',
+                        paddingVertical: 12,
+                        borderRadius: 8
+                      }}
+                    >
+                      <Ionicons name="image-outline" size={18} color={Theme.primary} />
+                      <Text style={{ fontFamily: Fonts.bold, fontSize: 13, color: Theme.primary }}>Upload Image</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </ScrollView>
 
             <View style={[styles.modalFooter, { flexDirection: 'row', gap: 10 }]}>
               <TouchableOpacity
                 style={[styles.confirmBtn, { flex: 1, backgroundColor: Theme.bgMuted }]}
-                onPress={() => setCashOutForm({ CashOutId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '' })}
+                onPress={() => setCashOutForm({ CashOutId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '', AttachmentUrl: '' })}
               >
                 <Text style={[styles.confirmBtnText, { color: Theme.textPrimary }]}>Clear Form</Text>
               </TouchableOpacity>
@@ -2235,6 +2555,123 @@ const fetchDayHistory = async () => {
                 <Text style={styles.confirmBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Full-Screen Image Viewer Modal */}
+      <Modal visible={!!viewerImageUrl} transparent animationType="fade" onRequestClose={() => setViewerImageUrl(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFill} 
+            activeOpacity={1} 
+            onPress={() => setViewerImageUrl(null)} 
+          />
+          <View style={{ width: '90%', height: '80%', justifyContent: 'center', alignItems: 'center' }}>
+            {!!viewerImageUrl && (
+              <Image 
+                source={{ uri: viewerImageUrl.startsWith('http') ? viewerImageUrl : `${API_URL}${viewerImageUrl}` }} 
+                style={{ width: '100%', height: '100%', resizeMode: 'contain' }} 
+              />
+            )}
+          </View>
+          <TouchableOpacity 
+            onPress={() => setViewerImageUrl(null)} 
+            style={{ position: 'absolute', top: 40, right: 20, backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 20 }}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* All Cash Out Media Gallery Modal */}
+      <Modal
+        visible={showAllMediaModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAllMediaModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowAllMediaModal(false)}
+          />
+          <View style={[styles.modalContent, { maxWidth: 600, width: '90%', maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cash Out Receipts Gallery</Text>
+              <TouchableOpacity onPress={() => setShowAllMediaModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={Theme.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalDivider} />
+
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+              {cashOutEntries.filter(co => co.AttachmentUrl).length > 0 ? (
+                cashOutEntries.filter(co => co.AttachmentUrl).map((co, idx) => (
+                  <View key={idx} style={{ 
+                    flexDirection: 'row', 
+                    backgroundColor: Theme.bgMuted, 
+                    borderRadius: 12, 
+                    padding: 12, 
+                    marginBottom: 12, 
+                    borderWidth: 1, 
+                    borderColor: Theme.border,
+                    alignItems: 'center'
+                  }}>
+                    <TouchableOpacity onPress={() => {
+                      setShowAllMediaModal(false);
+                      setViewerImageUrl(co.AttachmentUrl);
+                    }}>
+                      <Image 
+                        source={{ uri: co.AttachmentUrl.startsWith('http') ? co.AttachmentUrl : `${API_URL}${co.AttachmentUrl}` }} 
+                        style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12, resizeMode: 'cover' }} 
+                      />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: Fonts.bold, fontSize: 14, color: Theme.textPrimary }}>
+                        {co.Reason || 'Cash Out'}
+                      </Text>
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 12, color: Theme.textSecondary, marginTop: 2 }}>
+                        Ref: {co.ReferenceNo || 'N/A'}
+                      </Text>
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: Theme.textMuted, marginTop: 2 }}>
+                        By: {co.CreatedBy || 'Admin'}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontFamily: Fonts.black, fontSize: 15, color: Theme.danger }}>
+                        -{formatCurrency(co.Amount)}
+                      </Text>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setShowAllMediaModal(false);
+                          setViewerImageUrl(co.AttachmentUrl);
+                        }}
+                        style={{ 
+                          marginTop: 8, 
+                          flexDirection: 'row', 
+                          alignItems: 'center', 
+                          gap: 4, 
+                          backgroundColor: Theme.primary + '20', 
+                          paddingHorizontal: 8, 
+                          paddingVertical: 4, 
+                          borderRadius: 6 
+                        }}
+                      >
+                        <Ionicons name="eye-outline" size={14} color={Theme.primary} />
+                        <Text style={{ fontFamily: Fonts.bold, fontSize: 11, color: Theme.primary }}>View</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                  <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: Theme.textMuted }}>No receipts attached for today's cash outs.</Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2266,7 +2703,7 @@ const fetchDayHistory = async () => {
               {/* List of Today's Cash In */}
               <View style={{ marginBottom: 15 }}>
                 {cashInEntries.length > 0 ? (
-                  <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                  <View>
                     {cashInEntries.map((ci, idx) => (
                       <View key={idx} style={[styles.tableRow, { alignItems: 'center' }]}>
                         <Text style={[styles.tableCellText, { flex: 2 }]}>{ci.Reason || 'Cash In'}</Text>
@@ -2281,7 +2718,7 @@ const fetchDayHistory = async () => {
                         </View>
                       </View>
                     ))}
-                  </ScrollView>
+                  </View>
                 ) : (
                   <View style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: '#FAFAFA', borderRadius: 8, borderWidth: 1, borderColor: Theme.border }}>
                     <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: Theme.textMuted }}>No cash in entries found for the selected time period.</Text>
@@ -2327,7 +2764,7 @@ const fetchDayHistory = async () => {
             <View style={[styles.modalFooter, { flexDirection: 'row', gap: 10 }]}>
               <TouchableOpacity
                 style={[styles.confirmBtn, { flex: 1, backgroundColor: Theme.bgMuted }]}
-                onPress={() => setCashInForm({ CashInId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '' })}
+                onPress={() => setCashInForm({ CashInId: '', Amount: '', Reason: '', Remarks: '', PaymentMode: 'Cash', ReferenceNo: '', AttachmentUrl: '' })}
               >
                 <Text style={[styles.confirmBtnText, { color: Theme.textPrimary }]}>Clear Form</Text>
               </TouchableOpacity>
@@ -2370,7 +2807,7 @@ const fetchDayHistory = async () => {
               {/* List of Today's Artist Cash Box */}
               <View style={{ marginBottom: 15 }}>
                 {cashBoxEntries.length > 0 ? (
-                  <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                  <View>
                     {cashBoxEntries.map((co, idx) => (
                       <View key={idx} style={[styles.tableRow, { alignItems: 'center' }]}>
                         <Text style={[styles.tableCellText, { flex: 2, fontFamily: Fonts.bold }]}>{co.ArtistName || 'Artist'}</Text>
@@ -2385,7 +2822,7 @@ const fetchDayHistory = async () => {
                         </View>
                       </View>
                     ))}
-                  </ScrollView>
+                  </View>
                 ) : (
                   <View style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: Theme.bgInput, borderRadius: 8, borderWidth: 1, borderColor: Theme.border }}>
                     <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: Theme.textMuted }}>No cash box entries found for the selected time period.</Text>
@@ -3009,7 +3446,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   cardBodyScroll: {
-    height: 280,
     paddingHorizontal: 12,
   },
   row: {
@@ -3137,7 +3573,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   modalList: {
-    maxHeight: 300,
+    // no maxHeight - let modal content expand naturally
   },
   sectionHeader: {
     backgroundColor: Theme.bgMuted,
