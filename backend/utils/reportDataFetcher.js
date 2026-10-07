@@ -35,7 +35,7 @@ async function fetchFullReportData(startDateStr, endDateStr, pool) {
 
   // 1. Fetch combined sales list (same logic as /all endpoint)
   const shWhere = `CAST(ISNULL(sh.start_date, CAST(sh.LastSettlementDate AS DATE)) AS DATE) >= CAST('${startDateStr}' AS DATE) AND CAST(ISNULL(sh.start_date, CAST(sh.LastSettlementDate AS DATE)) AS DATE) <= CAST('${endDateStr}' AS DATE)`;
-  const cctWhere = `CAST(cct.CreatedDate AS DATE) >= CAST('${startDateStr}' AS DATE) AND CAST(cct.CreatedDate AS DATE) <= CAST('${endDateStr}' AS DATE)`;
+  const cctWhere = `CAST(ISNULL(cct.start_date, CAST(cct.CreatedDate AS DATE)) AS DATE) >= CAST('${startDateStr}' AS DATE) AND CAST(ISNULL(cct.start_date, CAST(cct.CreatedDate AS DATE)) AS DATE) <= CAST('${endDateStr}' AS DATE)`;
 
   const salesQuery = `
     SELECT 
